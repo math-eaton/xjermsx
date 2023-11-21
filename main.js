@@ -86,10 +86,10 @@ function createGUI() {
   gui.add( guiData, 'drawFillShapes' ).name( 'Draw fill shapes' ).onChange( update );
 
   // gui.addColor( guiData, 'customFillColor' ).name( 'Custom Fill Color' ).onChange( update );
-  gui.add(guiData, 'customFillColor').name('Custom Fill Hex').onChange(updateFillColor).onFinishChange(validateHexInput);
+  gui.addColor(guiData, 'customFillColor').name('Custom Fill Color').onFinishChange(update);
 
   // gui.addColor( guiData, 'customStrokeColor' ).name( 'Custom Stroke Color' ).onChange( update );
-  gui.add(guiData, 'customStrokeColor').name('Custom Stroke Hex').onChange(updateStrokeColor).onFinishChange(validateHexInput);
+  gui.addColor(guiData, 'customStrokeColor').name('Custom Stroke Color').onFinishChange(update);
 
   gui.add( guiData, 'strokesWireframe' ).name( 'Wireframe strokes' ).onChange( update );
 
@@ -97,10 +97,10 @@ function createGUI() {
 
   gui.add( guiData, 'extrudeSVG' ).name( 'Extrude SVG' ).onChange( update );
 
-  gui.add( guiData, 'extrusionDepth', 1, 100 ).name( 'Extrusion depth' ).onChange( update );
+  gui.add(guiData, 'extrusionDepth', 1, 100).name('Extrusion depth').onFinishChange(update);
 
   function update() {
-  loadSVG(guiData.currentURL); 
+    loadSVG(guiData.currentURL); 
 
     svgMeshes.forEach(mesh => {
       updateCombinedMaterial(mesh, 'phong', {

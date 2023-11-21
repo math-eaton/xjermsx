@@ -48,5 +48,5 @@ def png_to_svg(png_file, svg_file, target_dpi=72, original_dpi=300):
     dwg.save()
     print("SVG file saved successfully.")
 
-png_to_svg('/Users/matthewheaton/Documents/GitHub/xjermsx/output/moonpixels_invert.png', '/Users/matthewheaton/Documents/GitHub/xjermsx/public/moonpixels.svg', target_dpi=240, original_dpi=300)
+png_to_svg('/Users/matthewheaton/Documents/DOCENTS/posters/heaven_july_2023/lips.png', '/Users/matthewheaton/Documents/GitHub/xjermsx/public/lips.svg', target_dpi=100, original_dpi=300)
 print("done.")
