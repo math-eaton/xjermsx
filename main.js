@@ -1,260 +1,239 @@
 import * as THREE from 'three';
-			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-			import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
-			let renderer, scene, camera, gui, guiData;
-
-			init();
-
-			//
-
-			function init() {
-
-				const container = document.getElementById( 'container' );
-
-				//
-
-				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 1000 );
-				camera.position.set( 0, 0, 200 );
-
-				//
-
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
-				renderer.setPixelRatio( window.devicePixelRatio );
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
-
-				//
-
-				const controls = new OrbitControls( camera, renderer.domElement );
-				controls.addEventListener( 'change', render );
-				controls.screenSpacePanning = true;
-
-        // Reverse the control scheme
-        controls.mouseButtons = {
-          LEFT: THREE.MOUSE.PAN,
-          MIDDLE: THREE.MOUSE.DOLLY,
-          RIGHT: THREE.MOUSE.ROTATE
-        }
-
-				//
-
-				window.addEventListener( 'resize', onWindowResize );
-
-				guiData = {
-					currentURL: '/skyline_outline.svg',
-					drawFillShapes: true,
-					drawStrokes: true,
-          customFillColor: '#ff0000', // Default red fill color
-          customStrokeColor: '#0000ff', // Default blue stroke color
-          useCustomFillColor: true, // Toggle for using custom fill color
-          useCustomStrokeColor: true, // Toggle for using custom stroke color      
-					fillShapesWireframe: true,
-					strokesWireframe: true,
-          extrudeSVG: true, // Control for extruding SVG
-          extrusionDepth: 20, // Depth of extrusion      
-				};
-
-				loadSVG( guiData.currentURL );
-
-				createGUI();
-
-			}
-
-			function createGUI() {
-
-				if ( gui ) gui.destroy();
-
-				gui = new GUI();
-
-				gui.add( guiData, 'currentURL', {
-
-					'skyline outline': '/skyline_outline.svg',
-					'skyline fill': '/skyline_fill.svg',
-					'emptyPath': 'models/svg/emptyPath.svg',
-
-				} ).name( 'SVG File' ).onChange( update );
-
-				gui.add( guiData, 'drawStrokes' ).name( 'Draw strokes' ).onChange( update );
-
-				gui.add( guiData, 'drawFillShapes' ).name( 'Draw fill shapes' ).onChange( update );
-
-        gui.addColor( guiData, 'customFillColor' ).name( 'Custom Fill Color' ).onChange( update );
-        gui.add( guiData, 'useCustomFillColor' ).name( 'Use Custom Fill Color' ).onChange( update );
-    
-        gui.addColor( guiData, 'customStrokeColor' ).name( 'Custom Stroke Color' ).onChange( update );
-        gui.add( guiData, 'useCustomStrokeColor' ).name( 'Use Custom Stroke Color' ).onChange( update );    
-
-				gui.add( guiData, 'strokesWireframe' ).name( 'Wireframe strokes' ).onChange( update );
-
-				gui.add( guiData, 'fillShapesWireframe' ).name( 'Wireframe fill shapes' ).onChange( update );
-
-        gui.add( guiData, 'extrudeSVG' ).name( 'Extrude SVG' ).onChange( update );
-
-        gui.add( guiData, 'extrusionDepth', 1, 100 ).name( 'Extrusion depth' ).onChange( update );
-
-				function update() {
-
-					loadSVG( guiData.currentURL );
-
-				}
-
-			}
-
-      function updateMaterial(mesh, materialType, materialOptions) {
-        let material;
-    
-        switch (materialType) {
-            case 'phong':
-                material = new THREE.MeshPhongMaterial(materialOptions);
-                break;
-            case 'lambert':
-                material = new THREE.MeshLambertMaterial(materialOptions);
-                break;
-            // Add more cases for different material types
-            default:
-                material = new THREE.MeshBasicMaterial(materialOptions);
-        }
-    
-        mesh.material = material;
-    }
-    
-
-			function loadSVG( url ) {
-
-				//
-
-				scene = new THREE.Scene();
-				scene.background = new THREE.Color( "#000000" );
-
-				//
-
-				const helper = new THREE.GridHelper( 160, 10, 0x8d8d8d, 0xc1c1c1 );
-				helper.rotation.x = Math.PI / 2;
-				// scene.add( helper );
-
-				//
-
-				const loader = new SVGLoader();
-        const textureLoader = new THREE.TextureLoader();
-        const texture = textureLoader.load('path/to/texture.jpg');
+let renderer, scene, camera, gui, guiData;
+let svgMeshes = []; 
 
 
-				loader.load( url, function ( data ) {
+init();
 
-					const group = new THREE.Group();
-					group.scale.multiplyScalar( 0.25 );
-					group.position.x = - 70;
-					group.position.y = 70;
-					group.scale.y *= - 1;
+//
 
-					let renderOrder = 0;
+function init() {
 
-          for ( const path of data.paths ) {
-            let fillColor = path.userData.style.fill;
-            let strokeColor = path.userData.style.stroke;
+  const container = document.getElementById( 'container' );
 
-            if (guiData.useCustomFillColor) {
-                fillColor = guiData.customFillColor; // Use custom fill color
-            }
+  //
 
-            if (guiData.useCustomStrokeColor) {
-                strokeColor = guiData.customStrokeColor; // Use custom stroke color
-            }
+  camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 1000 );
+  camera.position.set( 0, 0, 200 );
 
-						if ( guiData.drawFillShapes && fillColor !== undefined && fillColor !== 'none' ) {
+  //
 
-							const material = new THREE.MeshBasicMaterial( {
-								color: new THREE.Color().setStyle( fillColor ),
-								opacity: path.userData.style.fillOpacity,
-								transparent: true,
-								side: THREE.DoubleSide,
-								depthWrite: false,
-								wireframe: guiData.fillShapesWireframe
-							} );
+  renderer = new THREE.WebGLRenderer( { antialias: true } );
+  renderer.setPixelRatio( window.devicePixelRatio );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  container.appendChild( renderer.domElement );
 
-              const shapes = SVGLoader.createShapes( path );
+  //
 
-              for ( const shape of shapes ) {
-                  let geometry;
+  const controls = new OrbitControls( camera, renderer.domElement );
+  controls.addEventListener( 'change', render );
+  controls.screenSpacePanning = true;
 
-                  if (guiData.extrudeSVG) {
-                      // Extrude geometry if the option is checked
-                      geometry = new THREE.ExtrudeGeometry(shape, {
-                          depth: guiData.extrusionDepth,
-                          bevelEnabled: false
-                      });
-                  } else {
-                      // Regular flat shape geometry
-                      geometry = new THREE.ShapeGeometry(shape);
-                  }
+  // Reverse the control scheme
+  controls.mouseButtons = {
+    LEFT: THREE.MOUSE.PAN,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.ROTATE
+  }
 
-                  const mesh = new THREE.Mesh(geometry, material);
-                  mesh.renderOrder = renderOrder++;
+  //
 
-                  group.add(mesh);
-                  // Update the material
-                  updateMaterial(mesh, 'phong', {
-                    map: texture,
-                    specular: 0x222222,
-                    shininess: 25
+  window.addEventListener( 'resize', onWindowResize );
+
+  guiData = {
+    currentURL: '/skyline_outline.svg',
+    drawFillShapes: true,
+    drawStrokes: true,
+    customFillColor: '#ff0000', // Default red fill color
+    customStrokeColor: '#0000ff', // Default blue stroke color
+    useCustomFillColor: true, // Toggle for using custom fill color
+    useCustomStrokeColor: true, // Toggle for using custom stroke color      
+    fillShapesWireframe: true,
+    strokesWireframe: true,
+    extrudeSVG: true, // Control for extruding SVG
+    extrusionDepth: 20, // Depth of extrusion      
+  };
+
+  loadSVG( guiData.currentURL );
+
+  createGUI();
+
+}
+
+function createGUI() {
+
+  if ( gui ) gui.destroy();
+
+  gui = new GUI();
+
+  gui.add( guiData, 'currentURL', {
+
+    'skyline outline': '/skyline_outline.svg',
+    'skyline fill': '/skyline_fill.svg',
+    'moon': '/moonpixels.svg',
+    'cityscape': '/cityscape.svg',
+    'emptyPath': 'models/svg/emptyPath.svg',
+
+  } ).name( 'SVG File' ).onChange( update );
+
+  gui.add( guiData, 'drawStrokes' ).name( 'Draw strokes' ).onChange( update );
+
+  gui.add( guiData, 'drawFillShapes' ).name( 'Draw fill shapes' ).onChange( update );
+
+  // gui.addColor( guiData, 'customFillColor' ).name( 'Custom Fill Color' ).onChange( update );
+  gui.add(guiData, 'customFillColor').name('Custom Fill Hex').onChange(updateFillColor).onFinishChange(validateHexInput);
+
+  // gui.addColor( guiData, 'customStrokeColor' ).name( 'Custom Stroke Color' ).onChange( update );
+  gui.add(guiData, 'customStrokeColor').name('Custom Stroke Hex').onChange(updateStrokeColor).onFinishChange(validateHexInput);
+
+  gui.add( guiData, 'strokesWireframe' ).name( 'Wireframe strokes' ).onChange( update );
+
+  gui.add( guiData, 'fillShapesWireframe' ).name( 'Wireframe fill shapes' ).onChange( update );
+
+  gui.add( guiData, 'extrudeSVG' ).name( 'Extrude SVG' ).onChange( update );
+
+  gui.add( guiData, 'extrusionDepth', 1, 100 ).name( 'Extrusion depth' ).onChange( update );
+
+  function update() {
+  loadSVG(guiData.currentURL); 
+
+    svgMeshes.forEach(mesh => {
+      updateCombinedMaterial(mesh, 'phong', {
+        color: '#FFFFFF', // Default white fill color
+        specular: 0xFFFFFF,
+        shininess: 25
+    }, strokeColor); // Use stroke color for wireframe
+});
+}
+
+function updateFillColor(value) {
+  guiData.customFillColor = enforceHexFormat(value);
+  update();
+}
+
+function updateStrokeColor(value) {
+  guiData.customStrokeColor = enforceHexFormat(value);
+  update();
+}
+
+function enforceHexFormat(value) {
+  let hex = value;
+  if (!hex.startsWith('#')) {
+      hex = '#' + hex;
+  }
+  return hex.substring(0, 7); // Limit to 7 characters
+}
+
+function validateHexInput(value) {
+  const validHex = /^#[0-9A-Fa-f]{6}$/;
+  if (!validHex.test(value)) {
+      console.warn('Invalid hex color code:', value);
+      // Optional: Reset to a default value if invalid
+  }
+}
+
+}
+
+function updateCombinedMaterial(mesh, solidMaterialType, solidMaterialOptions, wireframeColor = 0x000000) {
+  let solidMaterial;
+
+  switch (solidMaterialType) {
+      case 'phong':
+          solidMaterial = new THREE.MeshPhongMaterial(solidMaterialOptions);
+          break;
+      case 'lambert':
+          solidMaterial = new THREE.MeshLambertMaterial(solidMaterialOptions);
+          break;
+      // Add more cases as needed
+      default:
+          solidMaterial = new THREE.MeshBasicMaterial(solidMaterialOptions);
+  }
+
+  const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+      color: wireframeColor, 
+      wireframe: true 
+  });
+
+  // Create a multi-material array
+  mesh.material = [solidMaterial, wireframeMaterial];
+}
+
+function loadSVG(url) {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color("#000000");
+
+  const loader = new SVGLoader();
+  loader.load(url, function (data) {
+      const group = new THREE.Group();
+      group.scale.multiplyScalar(0.25);
+      group.position.x = -70;
+      group.position.y = 70;
+      group.scale.y *= -1;
+
+      for (const path of data.paths) {
+          const shapes = SVGLoader.createShapes(path);
+
+          for (const shape of shapes) {
+              let geometry;
+
+              // Determine if we should extrude
+              if (guiData.extrudeSVG) {
+                  geometry = new THREE.ExtrudeGeometry(shape, {
+                      depth: guiData.extrusionDepth,
+                      bevelEnabled: false
                   });
-                  
-							}
+              } else {
+                  geometry = new THREE.ShapeGeometry(shape);
+              }
 
-						}
+              // Determine fill and stroke colors
+              let fillColor = guiData.useCustomFillColor ? guiData.customFillColor : path.userData.style.fill;
+              let strokeColor = guiData.useCustomStrokeColor ? guiData.customStrokeColor : path.userData.style.stroke;
 
-						if ( guiData.drawStrokes && strokeColor !== undefined && strokeColor !== 'none' ) {
+              fillColor = fillColor !== 'none' ? fillColor : '#ffffff'; // Default white
+              strokeColor = strokeColor !== 'none' ? strokeColor : '#000000'; // Default black
 
-							const material = new THREE.MeshBasicMaterial( {
-								color: new THREE.Color().setStyle( strokeColor ),
-								opacity: path.userData.style.strokeOpacity,
-								transparent: true,
-								side: THREE.DoubleSide,
-								depthWrite: false,
-								wireframe: guiData.strokesWireframe
-							} );
+              // Create solid and wireframe materials
+              const solidMaterial = new THREE.MeshBasicMaterial({ 
+                  color: new THREE.Color(fillColor),
+                  wireframe: guiData.fillShapesWireframe 
+              });
 
-							for ( const subPath of path.subPaths ) {
+              const wireframeMaterial = new THREE.MeshBasicMaterial({ 
+                  color: new THREE.Color(strokeColor),
+                  wireframe: guiData.strokesWireframe 
+              });
 
-								const geometry = SVGLoader.pointsToStroke( subPath.getPoints(), path.userData.style );
+              // Create a multi-material mesh
+              const materials = [solidMaterial, wireframeMaterial];
+              const mesh = new THREE.Mesh(geometry, materials);
+              group.add(mesh);
+          }
+      }
 
-								if ( geometry ) {
+      scene.add(group);
+      render();
+  });
+}
 
-									const mesh = new THREE.Mesh( geometry, material );
-									mesh.renderOrder = renderOrder ++;
 
-									group.add( mesh );
+function onWindowResize() {
 
-								}
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
 
-							}
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  render();
 
-						}
+}
 
-					}
+function render() {
 
-					scene.add( group );
+  renderer.render( scene, camera );
 
-					render();
-
-				} );
-
-			}
-
-			function onWindowResize() {
-
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-
-				renderer.setSize( window.innerWidth, window.innerHeight );
-				render();
-
-			}
-
-			function render() {
-
-				renderer.render( scene, camera );
-
-			}
+}
