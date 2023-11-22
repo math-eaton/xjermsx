@@ -57,6 +57,7 @@ function init() {
     strokesWireframe: true,
     extrudeSVG: true, // Control for extruding SVG
     extrusionDepth: 20, // Depth of extrusion      
+    displacementScale: 5, // Default displacement scale
   };
 
   loadSVG( guiData.currentURL );
@@ -77,7 +78,11 @@ function createGUI() {
     'skyline fill': '/skyline_fill.svg',
     'moon': '/moonpixels.svg',
     'cityscape': '/cityscape.svg',
-    'emptyPath': 'models/svg/emptyPath.svg',
+    'lips': '/lips.svg',
+    'sphere': '/sphere.svg',
+    'pole forest': '/poleforest.svg',
+    'candle': '/smilie.svg',
+    'track': '/track.svg',
 
   } ).name( 'SVG File' ).onChange( update );
 
@@ -99,11 +104,15 @@ function createGUI() {
 
   gui.add(guiData, 'extrusionDepth', 1, 100).name('Extrusion depth').onFinishChange(update);
 
+  gui.add(guiData, 'displacementScale', 0, 10) // Min and max values for the slider
+  .name('Displacement Scale')
+  .onFinishChange(() => loadSVG(guiData.currentURL)); // Reload SVG with new scale
+
   function update() {
     loadSVG(guiData.currentURL); 
 
     svgMeshes.forEach(mesh => {
-      updateCombinedMaterial(mesh, 'phong', {
+      updateCombinedMaterial(mesh, 'lambert', {
         color: '#FFFFFF', // Default white fill color
         specular: 0xFFFFFF,
         shininess: 25
@@ -190,6 +199,22 @@ function loadSVG(url) {
               } else {
                   geometry = new THREE.ShapeGeometry(shape);
               }
+
+              const positionAttribute = geometry.getAttribute('position');
+              const vertex = new THREE.Vector3();
+              geometry.computeVertexNormals();
+              const normalAttribute = geometry.getAttribute('normal');
+              for (let i = 0; i < positionAttribute.count; i++) {
+                  const vertex = new THREE.Vector3();
+                  vertex.fromBufferAttribute(positionAttribute, i);
+                  const normal = new THREE.Vector3();
+                  normal.fromBufferAttribute(normalAttribute, i);
+                  normal.multiplyScalar(Math.random() * guiData.displacementScale);
+                  vertex.add(normal);
+                  positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+              }
+              positionAttribute.needsUpdate = true;
+                          
 
               // Determine fill and stroke colors
               let fillColor = guiData.useCustomFillColor ? guiData.customFillColor : path.userData.style.fill;

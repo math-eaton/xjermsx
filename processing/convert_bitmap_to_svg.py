@@ -1,6 +1,15 @@
 from PIL import Image
 import svgwrite
 
+def apply_threshold_filter(img):
+    """Applies a 50% threshold filter to convert the image to black and white."""
+    print("Applying threshold filter...")
+    # Convert to grayscale if the image is colored
+    if img.mode not in ['1', 'L']:
+        img = img.convert('L')
+    # Apply threshold (128 out of 255 is 50%)
+    return img.point(lambda p: p > 128 and 255)
+
 def resize_image(img, target_dpi=72, original_dpi=300):
     """Resize the image to target DPI using bilinear interpolation."""
     print("Resizing the image...")
@@ -33,6 +42,8 @@ def process_horizontal_lines(img):
 def png_to_svg(png_file, svg_file, target_dpi=72, original_dpi=300):
     print(f"Opening image file: {png_file}")
     img = Image.open(png_file)
+
+    img = apply_threshold_filter(img)
     img = img.convert('1')  # Convert image to black and white
 
     img = resize_image(img, target_dpi, original_dpi)
@@ -48,5 +59,6 @@ def png_to_svg(png_file, svg_file, target_dpi=72, original_dpi=300):
     dwg.save()
     print("SVG file saved successfully.")
 
-png_to_svg('/Users/matthewheaton/Documents/DOCENTS/posters/heaven_july_2023/lips.png', '/Users/matthewheaton/Documents/GitHub/xjermsx/public/lips.svg', target_dpi=100, original_dpi=300)
+
+png_to_svg('/Users/matthewheaton/Documents/GitHub/xjermsx/output/Sample.jpg', '/Users/matthewheaton/Documents/GitHub/xjermsx/public/track.svg', target_dpi=300, original_dpi=300)
 print("done.")
