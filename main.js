@@ -1,264 +1,179 @@
+// Import modules
 import * as THREE from 'three';
-import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
-import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import proj4 from 'proj4';
+import '/style.css'; 
 
-let renderer, scene, camera, gui, guiData;
-let svgMeshes = []; 
+// Define the custom projection with its PROJ string
+const statePlaneProjString = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs";
+proj4.defs("EPSG:32118", statePlaneProjString);
 
-
-init();
-
-//
-
-function init() {
-
-  const container = document.getElementById( 'container' );
-
-  //
-
-  camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 1000 );
-  camera.position.set( 0, 0, 200 );
-
-  //
-
-  renderer = new THREE.WebGLRenderer( { antialias: true } );
-  renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  container.appendChild( renderer.domElement );
-
-  //
-
-  const controls = new OrbitControls( camera, renderer.domElement );
-  controls.addEventListener( 'change', render );
-  controls.screenSpacePanning = true;
-
-  // Reverse the control scheme
-  controls.mouseButtons = {
-    LEFT: THREE.MOUSE.PAN,
-    MIDDLE: THREE.MOUSE.DOLLY,
-    RIGHT: THREE.MOUSE.ROTATE
+// Convert lon/lat to State Plane coordinates
+function toStatePlane(lon, lat) {
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+    throw new Error(`Invalid coordinates: longitude (${lon}), latitude (${lat})`);
   }
-
-  //
-
-  window.addEventListener( 'resize', onWindowResize );
-
-  guiData = {
-    currentURL: '/skyline_outline.svg',
-    drawFillShapes: true,
-    drawStrokes: true,
-    customFillColor: '#ff0000', // Default red fill color
-    customStrokeColor: '#0000ff', // Default blue stroke color
-    useCustomFillColor: true, // Toggle for using custom fill color
-    useCustomStrokeColor: true, // Toggle for using custom stroke color      
-    fillShapesWireframe: true,
-    strokesWireframe: true,
-    extrudeSVG: true, // Control for extruding SVG
-    extrusionDepth: 20, // Depth of extrusion      
-    displacementScale: 5, // Default displacement scale
-  };
-
-  loadSVG( guiData.currentURL );
-
-  createGUI();
-
+  return proj4("EPSG:32118").forward([lon, lat]);
 }
 
-function createGUI() {
+// Three.js - Initialize the Scene
+let scene, camera, renderer, controls, fmPropagationPolygons;
+let rotationSpeed = 0.05; // Adjust rotation speed as needed
 
-  if ( gui ) gui.destroy();
+// Define color scheme variables
+const colorScheme = {
+  ambientLightColor: "#404040", // Dark gray
+  directionalLightColor: "#ffffff", // White
+  backgroundColor: "#000000", // Black
+  polygonColor: "#FF1493", // Pink
+};
 
-  gui = new GUI();
-
-  gui.add( guiData, 'currentURL', {
-
-    'skyline outline': '/skyline_outline.svg',
-    'skyline fill': '/skyline_fill.svg',
-    'moon': '/moonpixels.svg',
-    'cityscape': '/cityscape.svg',
-    'lips': '/lips.svg',
-    'sphere': '/sphere.svg',
-    'pole forest': '/poleforest.svg',
-    'candle': '/smilie.svg',
-    'track': '/track.svg',
-
-  } ).name( 'SVG File' ).onChange( update );
-
-  gui.add( guiData, 'drawStrokes' ).name( 'Draw strokes' ).onChange( update );
-
-  gui.add( guiData, 'drawFillShapes' ).name( 'Draw fill shapes' ).onChange( update );
-
-  // gui.addColor( guiData, 'customFillColor' ).name( 'Custom Fill Color' ).onChange( update );
-  gui.addColor(guiData, 'customFillColor').name('Custom Fill Color').onFinishChange(update);
-
-  // gui.addColor( guiData, 'customStrokeColor' ).name( 'Custom Stroke Color' ).onChange( update );
-  gui.addColor(guiData, 'customStrokeColor').name('Custom Stroke Color').onFinishChange(update);
-
-  gui.add( guiData, 'strokesWireframe' ).name( 'Wireframe strokes' ).onChange( update );
-
-  gui.add( guiData, 'fillShapesWireframe' ).name( 'Wireframe fill shapes' ).onChange( update );
-
-  gui.add( guiData, 'extrudeSVG' ).name( 'Extrude SVG' ).onChange( update );
-
-  gui.add(guiData, 'extrusionDepth', 1, 100).name('Extrusion depth').onFinishChange(update);
-
-  gui.add(guiData, 'displacementScale', 0, 10) // Min and max values for the slider
-  .name('Displacement Scale')
-  .onFinishChange(() => loadSVG(guiData.currentURL)); // Reload SVG with new scale
-
-  function update() {
-    loadSVG(guiData.currentURL); 
-
-    svgMeshes.forEach(mesh => {
-      updateCombinedMaterial(mesh, 'lambert', {
-        color: '#FFFFFF', // Default white fill color
-        specular: 0xFFFFFF,
-        shininess: 25
-    }, strokeColor); // Use stroke color for wireframe
-});
-}
-
-function updateFillColor(value) {
-  guiData.customFillColor = enforceHexFormat(value);
-  update();
-}
-
-function updateStrokeColor(value) {
-  guiData.customStrokeColor = enforceHexFormat(value);
-  update();
-}
-
-function enforceHexFormat(value) {
-  let hex = value;
-  if (!hex.startsWith('#')) {
-      hex = '#' + hex;
-  }
-  return hex.substring(0, 7); // Limit to 7 characters
-}
-
-function validateHexInput(value) {
-  const validHex = /^#[0-9A-Fa-f]{6}$/;
-  if (!validHex.test(value)) {
-      console.warn('Invalid hex color code:', value);
-      // Optional: Reset to a default value if invalid
-  }
-}
-
-}
-
-function updateCombinedMaterial(mesh, solidMaterialType, solidMaterialOptions, wireframeColor = 0x000000) {
-  let solidMaterial;
-
-  switch (solidMaterialType) {
-      case 'phong':
-          solidMaterial = new THREE.MeshPhongMaterial(solidMaterialOptions);
-          break;
-      case 'lambert':
-          solidMaterial = new THREE.MeshLambertMaterial(solidMaterialOptions);
-          break;
-      // Add more cases as needed
-      default:
-          solidMaterial = new THREE.MeshBasicMaterial(solidMaterialOptions);
-  }
-
-  const wireframeMaterial = new THREE.MeshBasicMaterial({ 
-      color: wireframeColor, 
-      wireframe: true 
-  });
-
-  // Create a multi-material array
-  mesh.material = [solidMaterial, wireframeMaterial];
-}
-
-function loadSVG(url) {
+function initThreeJS() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color("#000000");
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.up.set(0, 0, 1); // Set Z as up-direction 
+  camera.position.z = 200; // Adjust as necessary
 
-  const loader = new SVGLoader();
-  loader.load(url, function (data) {
-      const group = new THREE.Group();
-      group.scale.multiplyScalar(0.25);
-      group.position.x = -70;
-      group.position.y = 70;
-      group.scale.y *= -1;
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-      for (const path of data.paths) {
-          const shapes = SVGLoader.createShapes(path);
+  // Initialize MapControls
+  controls = new MapControls(camera, renderer.domElement);
 
-          for (const shape of shapes) {
-              let geometry;
+  // Set up the control parameters as needed for a mapping interface
+  controls.screenSpacePanning = false;
+  controls.enableRotate = false; // typically map interfaces don't use rotation
+  controls.enableDamping = true; // an optional setting to give a smoother control feeling
+  controls.dampingFactor = 0.05; // amount of damping (drag)
 
-              // Determine if we should extrude
-              if (guiData.extrudeSVG) {
-                  geometry = new THREE.ExtrudeGeometry(shape, {
-                      depth: guiData.extrusionDepth,
-                      bevelEnabled: false
-                  });
-              } else {
-                  geometry = new THREE.ShapeGeometry(shape);
-              }
+  // Set the minimum and maximum polar angles (in radians) to prevent the camera from going over the vertical
+  // controls.minPolarAngle = 0; // 0 radians (0 degrees) - directly above the target
+  // controls.maxPolarAngle = (Math.PI / 2) - 0.05; // π/2 radians (90 degrees) - on the horizon
+  // // Set the maximum distance the camera can dolly out
+  // controls.maxDistance = 4.5;
+  // controls.minDistance = 0.2; 
 
-              const positionAttribute = geometry.getAttribute('position');
-              const vertex = new THREE.Vector3();
-              geometry.computeVertexNormals();
-              const normalAttribute = geometry.getAttribute('normal');
-              for (let i = 0; i < positionAttribute.count; i++) {
-                  const vertex = new THREE.Vector3();
-                  vertex.fromBufferAttribute(positionAttribute, i);
-                  const normal = new THREE.Vector3();
-                  normal.fromBufferAttribute(normalAttribute, i);
-                  normal.multiplyScalar(Math.random() * guiData.displacementScale);
-                  vertex.add(normal);
-                  positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
-              }
-              positionAttribute.needsUpdate = true;
-                          
+  
+  // Lighting
+  let ambientLight = new THREE.AmbientLight(colorScheme.ambientLightColor);
+  scene.add(ambientLight);
+  let directionalLight = new THREE.DirectionalLight(colorScheme.directionalLightColor, 0.5);
+  directionalLight.position.set(0, 1, 0);
+  scene.add(directionalLight);
 
-              // Determine fill and stroke colors
-              let fillColor = guiData.useCustomFillColor ? guiData.customFillColor : path.userData.style.fill;
-              let strokeColor = guiData.useCustomStrokeColor ? guiData.customStrokeColor : path.userData.style.stroke;
+  renderer.setClearColor(colorScheme.backgroundColor);
 
-              fillColor = fillColor !== 'none' ? fillColor : '#ffffff'; // Default white
-              strokeColor = strokeColor !== 'none' ? strokeColor : '#000000'; // Default black
+  const bbox = new THREE.BoxHelper(fmPropagationPolygons, 0xff0000);
+  // scene.add(bbox);
 
-              // Create solid and wireframe materials
-              const solidMaterial = new THREE.MeshBasicMaterial({ 
-                  color: new THREE.Color(fillColor),
-                  wireframe: guiData.fillShapesWireframe 
-              });
+  // Initialize fmPropagationPolygons group
+  fmPropagationPolygons = new THREE.Group();
+  scene.add(fmPropagationPolygons);
+}
 
-              const wireframeMaterial = new THREE.MeshBasicMaterial({ 
-                  color: new THREE.Color(strokeColor),
-                  wireframe: guiData.strokesWireframe 
-              });
+function addTestCube() {
+  const geometry = new THREE.BoxGeometry(100, 100, 100); // Create a 1x1x1 cube
+  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green cube
+  const cube = new THREE.Mesh(geometry, material);
 
-              // Create a multi-material mesh
-              const materials = [solidMaterial, wireframeMaterial];
-              const mesh = new THREE.Mesh(geometry, materials);
-              group.add(mesh);
-          }
+  // Position the cube in front of the camera
+  cube.position.set(0, 0, 5); // Adjust the position as needed
+
+  scene.add(cube); // Add the cube to the scene
+}
+
+
+function addPolygons(geojson, stride = 10) {
+  fmPropagationPolygons = new THREE.Group(); // Create a new group for polygons
+
+  for (let i = 0; i < geojson.features.length; i += stride) {
+    const feature = geojson.features[i];
+
+    // Create a new material for each polygon
+    const material = new THREE.MeshBasicMaterial({
+      color: colorScheme.polygonColor,
+      transparent: true,
+      wireframe: true,
+      dithering: true,
+      opacity: 0.8,
+      side: THREE.FrontSide
+    });
+
+    try {
+      const shapeCoords = feature.geometry.coordinates[0];
+      const vertices = [];
+      let centroid = new THREE.Vector3(0, 0, 0);
+
+      shapeCoords.forEach(coord => {
+        const [x, y] = toStatePlane(coord[0], coord[1]);
+        const z = 1;
+        const vertex = new THREE.Vector3(x, y, z);
+        vertices.push(vertex);
+        centroid.add(vertex);
+      });
+
+      centroid.divideScalar(shapeCoords.length);
+
+      const shapeGeometry = new THREE.BufferGeometry();
+      const positions = [];
+
+      for (let j = 0; j < shapeCoords.length; j++) {
+        positions.push(centroid.x, centroid.y, centroid.z);
+        positions.push(vertices[j].x, vertices[j].y, vertices[j].z);
+        positions.push(vertices[(j + 1) % shapeCoords.length].x, vertices[(j + 1) % shapeCoords.length].y, vertices[(j + 1) % shapeCoords.length].z);
       }
 
-      scene.add(group);
-      render();
+      shapeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      shapeGeometry.computeVertexNormals();
+
+      const mesh = new THREE.Mesh(shapeGeometry, material);
+      mesh.userData = { centroid: centroid, rotationRate: Math.random() * rotationSpeed };
+      fmPropagationPolygons.add(mesh);
+    } catch (error) {
+      console.error(`Error processing feature at index ${i}:`, error);
+    }
+  }
+
+  scene.add(fmPropagationPolygons);
+}
+
+  
+// Function to update rotation of polygons
+function updatePolygonsRotation() {
+  fmPropagationPolygons.children.forEach(mesh => {
+    // Translate to origin, rotate, translate back
+    mesh.position.sub(mesh.userData.centroid);
+    mesh.rotation.z += mesh.userData.rotationRate; // Rotate around Z-axis
+    mesh.position.add(mesh.userData.centroid);
   });
 }
+  
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
 
+  // Update polygon rotations
+  updatePolygonsRotation();
 
-function onWindowResize() {
-
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  render();
-
+  controls.update();
+  renderer.render(scene, camera);
 }
+  
+// On page load
+window.onload = function() {
+  initThreeJS(); // Initialize Three.js
+  // addTestCube(); // Add the test cube to the scene
 
-function render() {
+  const strideRate = 10 + Math.floor(Math.random() * 6) - 3; // Random stride rate +/- 3
+  fetch('data/FM_contours_NYS_clip_20231101.geojson')
+    .then(response => response.json())
+    .then(polygonGeojson => {
+      addPolygons(polygonGeojson, strideRate);
+    })
+    .catch(error => {
+      console.error('Error loading polygon GeoJSON:', error);
+    });
 
-  renderer.render( scene, camera );
-
-}
+  animate();
+};
