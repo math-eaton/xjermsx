@@ -16,9 +16,11 @@ function toStatePlane(lon, lat) {
   return proj4("EPSG:32118").forward([lon, lat]);
 }
 
+
 // Three.js - Initialize the Scene
 let scene, camera, renderer, controls, fmPropagationPolygons;
-let rotationSpeed = 0.05; // Adjust rotation speed as needed
+let rotationSpeed = 0.005; // Adjust rotation speed as needed
+let globalBoundingBox;
 
 // Define color scheme variables
 const colorScheme = {
@@ -30,9 +32,21 @@ const colorScheme = {
 
 function initThreeJS() {
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.up.set(0, 0, 1); // Set Z as up-direction 
-  camera.position.z = 200; // Adjust as necessary
+
+  
+  // Set initial camera position - Note: You will update this with actual geojson centroid
+  camera = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  // const [cameraX, cameraY] = toStatePlane(-75.5268, 42.9538);
+  const cameraX = 0;
+  const cameraY = 0;
+  const cameraZ = 100; // Adjust this based on the scale of your scene
+
+  camera.position.set(cameraX, cameraY, cameraZ);
+
+  // Orient the camera to look directly downwards
+  camera.lookAt(new THREE.Vector3(cameraX, cameraY, 0));
+  camera.up.set(0, 0, 1); // Ensuring Z-axis is up
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -41,20 +55,12 @@ function initThreeJS() {
   // Initialize MapControls
   controls = new MapControls(camera, renderer.domElement);
 
-  // Set up the control parameters as needed for a mapping interface
-  controls.screenSpacePanning = false;
-  controls.enableRotate = false; // typically map interfaces don't use rotation
-  controls.enableDamping = true; // an optional setting to give a smoother control feeling
-  controls.dampingFactor = 0.05; // amount of damping (drag)
+  // Control settings for top-down view
+  controls.screenSpacePanning = true;
+  controls.enableRotate = true; // Enable rotation if you want to allow the user to rotate the view
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.1;
 
-  // Set the minimum and maximum polar angles (in radians) to prevent the camera from going over the vertical
-  // controls.minPolarAngle = 0; // 0 radians (0 degrees) - directly above the target
-  // controls.maxPolarAngle = (Math.PI / 2) - 0.05; // π/2 radians (90 degrees) - on the horizon
-  // // Set the maximum distance the camera can dolly out
-  // controls.maxDistance = 4.5;
-  // controls.minDistance = 0.2; 
-
-  
   // Lighting
   let ambientLight = new THREE.AmbientLight(colorScheme.ambientLightColor);
   scene.add(ambientLight);
@@ -64,23 +70,11 @@ function initThreeJS() {
 
   renderer.setClearColor(colorScheme.backgroundColor);
 
-  const bbox = new THREE.BoxHelper(fmPropagationPolygons, 0xff0000);
-  // scene.add(bbox);
+  window.addEventListener('resize', onWindowResize, false);
 
   // Initialize fmPropagationPolygons group
   fmPropagationPolygons = new THREE.Group();
   scene.add(fmPropagationPolygons);
-}
-
-function addTestCube() {
-  const geometry = new THREE.BoxGeometry(100, 100, 100); // Create a 1x1x1 cube
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green cube
-  const cube = new THREE.Mesh(geometry, material);
-
-  // Position the cube in front of the camera
-  cube.position.set(0, 0, 5); // Adjust the position as needed
-
-  scene.add(cube); // Add the cube to the scene
 }
 
 
@@ -96,7 +90,7 @@ function addPolygons(geojson, stride = 10) {
       transparent: true,
       wireframe: true,
       dithering: true,
-      opacity: 0.8,
+      opacity: 0.1,
       side: THREE.FrontSide
     });
 
@@ -105,19 +99,22 @@ function addPolygons(geojson, stride = 10) {
       const vertices = [];
       let centroid = new THREE.Vector3(0, 0, 0);
 
+      // Convert coordinates to vertices and calculate centroid
       shapeCoords.forEach(coord => {
         const [x, y] = toStatePlane(coord[0], coord[1]);
-        const z = 1;
+        const z = 1; // Set Z to a constant value (adjust as needed)
         const vertex = new THREE.Vector3(x, y, z);
         vertices.push(vertex);
         centroid.add(vertex);
       });
 
-      centroid.divideScalar(shapeCoords.length);
+      centroid.divideScalar(shapeCoords.length); // Calculate the centroid
 
+      // Create the geometry for the polygon
       const shapeGeometry = new THREE.BufferGeometry();
       const positions = [];
 
+      // Create faces (triangles) for the polygon
       for (let j = 0; j < shapeCoords.length; j++) {
         positions.push(centroid.x, centroid.y, centroid.z);
         positions.push(vertices[j].x, vertices[j].y, vertices[j].z);
@@ -127,53 +124,201 @@ function addPolygons(geojson, stride = 10) {
       shapeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       shapeGeometry.computeVertexNormals();
 
+      // Translate the geometry so the centroid is at the origin
+      shapeGeometry.translate(-centroid.x, -centroid.y, -centroid.z);
+
+      // Create the mesh with the geometry and material
       const mesh = new THREE.Mesh(shapeGeometry, material);
+
+      // Store the centroid and rotation rate in userData for animation
       mesh.userData = { centroid: centroid, rotationRate: Math.random() * rotationSpeed };
+
+      // Translate the mesh back so it appears in the correct position
+      mesh.position.add(centroid);
+
+      // Add the mesh to the group
       fmPropagationPolygons.add(mesh);
     } catch (error) {
       console.error(`Error processing feature at index ${i}:`, error);
     }
   }
 
+  // Add the group to the scene
   scene.add(fmPropagationPolygons);
 }
 
-  
 // Function to update rotation of polygons
 function updatePolygonsRotation() {
   fmPropagationPolygons.children.forEach(mesh => {
-    // Translate to origin, rotate, translate back
-    mesh.position.sub(mesh.userData.centroid);
-    mesh.rotation.z += mesh.userData.rotationRate; // Rotate around Z-axis
-    mesh.position.add(mesh.userData.centroid);
+    mesh.rotation.z += mesh.userData.rotationRate; // Adjust the axis if necessary
   });
 }
-  
+
+
+// Resize function
+function onWindowResize() {
+  if (camera && renderer) {
+    // Update camera aspect
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    // Update renderer size
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Adjust zoom based on window size
+    // adjustCameraZoom();
+  }
+}
+
+
+function adjustCameraZoom() {
+  if (camera) {
+    // Example of dynamic FOV scaling:
+    // - If the window width is 600px or less, use a FOV of 90
+    // - If the window width is 1200px or more, use a FOV of 60
+    // - Scale linearly between those values for window widths in between
+    const minWidth = 600;
+    const maxWidth = 1200;
+    const minFov = 90;
+    const maxFov = 60;
+
+    // Map the window width to the FOV range
+    const scale = (window.innerWidth - minWidth) / (maxWidth - minWidth);
+    const fov = minFov + (maxFov - minFov) * Math.max(0, Math.min(1, scale));
+
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+}
+
+
+function getBoundingBoxOfGeoJSON(geojson) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  // Function to process each coordinate pair
+  const processCoordinates = (coords) => {
+    coords.forEach(coord => {
+      // If it's a MultiLineString, coord will be an array of coordinate pairs
+      if (Array.isArray(coord[0])) {
+        processCoordinates(coord); // Recursive call for arrays of coordinates
+      } else {
+        // Assuming coord is [longitude, latitude]
+        const [lon, lat] = coord;
+
+        // Transform the coordinates
+        const [x, y] = toStatePlane(lon, lat);
+
+        // Update the min and max values
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    });
+  };
+
+  // Iterate over each feature
+  geojson.features.forEach(feature => {
+    processCoordinates(feature.geometry.coordinates);
+  });
+
+  // Return bounding box with min and max as THREE.Vector3 objects
+  return {
+    min: new THREE.Vector3(minX - 2, minY - 2, -Infinity),
+    max: new THREE.Vector3(maxX + 2, maxY + 2, Infinity)
+  };
+}
+
+
+function constrainCamera(controls, boundingBox) {
+  controls.addEventListener('change', () => {
+    // Clamp the camera position within the bounding box
+    camera.position.x = Math.max(boundingBox.min.x, Math.min(boundingBox.max.x, camera.position.x));
+    camera.position.y = Math.max(boundingBox.min.y + 0.25, Math.min(boundingBox.max.y, camera.position.y));
+    camera.position.z = Math.max(boundingBox.min.z, Math.min(boundingBox.max.z, camera.position.z));
+    
+    // Clamp the controls target within the bounding box
+    controls.target.x = Math.max(boundingBox.min.x, Math.min(boundingBox.max.x, controls.target.x));
+    controls.target.y = Math.max(boundingBox.min.y, Math.min(boundingBox.max.y, controls.target.y));
+    controls.target.z = Math.max(boundingBox.min.z, Math.min(boundingBox.max.z, controls.target.z));
+
+  });
+}
+
+
+// Function to get the center of the bounding box
+// This function is correct but make sure it's called after the lines are added to the scene
+function getCenterOfBoundingBox(boundingBox) {
+  return new THREE.Vector3(
+    (boundingBox.min.x + boundingBox.max.x) / 2,
+    (boundingBox.min.y + boundingBox.max.y) / 2,
+    0 // Assuming Z is not important for centering in this case
+  );
+}
+
+// Ensure that you get the size correctly
+function getSizeOfBoundingBox(boundingBox) {
+  return new THREE.Vector3(
+    boundingBox.max.x - boundingBox.min.x,
+    boundingBox.max.y - boundingBox.min.y,
+    boundingBox.max.z - boundingBox.min.z
+  );
+}
+
+// Function to calculate the bounding box from the polygons group
+function calculateBoundingBoxFromGroup(group) {
+  const bbox = new THREE.Box3().setFromObject(group);
+  let size = new THREE.Vector3();
+  bbox.getSize(size);
+  let buffer = size.clone().multiplyScalar(0.25);
+  bbox.expandByVector(buffer);
+  return bbox;
+}
+
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
-
-  // Update polygon rotations
   updatePolygonsRotation();
-
   controls.update();
   renderer.render(scene, camera);
 }
-  
+
 // On page load
 window.onload = function() {
-  initThreeJS(); // Initialize Three.js
-  // addTestCube(); // Add the test cube to the scene
+  initThreeJS();
 
-  const strideRate = 10 + Math.floor(Math.random() * 6) - 3; // Random stride rate +/- 3
+  const strideRate = 10 + Math.floor(Math.random() * 6) - 3;
   fetch('data/FM_contours_NYS_clip_20231101.geojson')
     .then(response => response.json())
     .then(polygonGeojson => {
       addPolygons(polygonGeojson, strideRate);
+
+      const boundingBox = getBoundingBoxOfGeoJSON(polygonGeojson);
+      globalBoundingBox = boundingBox;
+
+      // Move the camera and set controls target
+      const center = getCenterOfBoundingBox(boundingBox);
+      const size = getSizeOfBoundingBox(boundingBox);
+      const maxDim = Math.max(size.x, size.y);
+      const fov = camera.fov * (Math.PI / 180);
+      let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+      cameraZ *= 0.7; // Adjust as needed
+      camera.position.set(center.x, center.y, cameraZ);
+      controls.target.set(center.x, center.y, 0);
+
+      // Now, add the constraints to the camera and controls
+      constrainCamera(controls, boundingBox);
+
+      // Call this after setting the position and target
+      controls.update();
+
+      // Start the animation loop
+      animate();
     })
     .catch(error => {
-      console.error('Error loading polygon GeoJSON:', error);
+      console.error('Error loading GeoJSON:', error);
     });
-
-  animate();
-};
+}

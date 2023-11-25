@@ -168,8 +168,6 @@ function initThreeJS() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById('three-container').appendChild(renderer.domElement);
 
-
-    // Set initial positions - We'll update these later
     rayGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
 
     // Create the line and add it to the scene
@@ -252,41 +250,41 @@ adjustCameraZoom();
 
 
 // check if mouseover is intersecting polygons
-function checkIntersection() {
-  raycaster.setFromCamera(mouse, camera);
+// function checkIntersection() {
+//   raycaster.setFromCamera(mouse, camera);
   
-  // Update the ray line geometry
-  const rayDirection = new THREE.Vector3();
-  raycaster.ray.direction.normalize();
+//   // Update the ray line geometry
+//   const rayDirection = new THREE.Vector3();
+//   raycaster.ray.direction.normalize();
 
-  const startPoint = raycaster.ray.origin.clone();
-  const endPoint = startPoint.clone().add(rayDirection.clone().multiplyScalar(1000)); // Adjust length as needed
+//   const startPoint = raycaster.ray.origin.clone();
+//   const endPoint = startPoint.clone().add(rayDirection.clone().multiplyScalar(1000)); // Adjust length as needed
 
-  const positions = rayLine.geometry.attributes.position.array;
-  positions[0] = startPoint.x;
-  positions[1] = startPoint.y;
-  positions[2] = startPoint.z;
-  positions[3] = endPoint.x;
-  positions[4] = endPoint.y;
-  positions[5] = endPoint.z;
-  rayLine.geometry.attributes.position.needsUpdate = true;
+//   const positions = rayLine.geometry.attributes.position.array;
+//   positions[0] = startPoint.x;
+//   positions[1] = startPoint.y;
+//   positions[2] = startPoint.z;
+//   positions[3] = endPoint.x;
+//   positions[4] = endPoint.y;
+//   positions[5] = endPoint.z;
+//   rayLine.geometry.attributes.position.needsUpdate = true;
 
 
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(polygons, true); // Only check polygons
+//   raycaster.setFromCamera(mouse, camera);
+//   const intersects = raycaster.intersectObjects(polygons, true); // Only check polygons
 
-  // console.log("Intersected Objects:", intersects.length); // Log the number of intersections
+//   // console.log("Intersected Objects:", intersects.length); // Log the number of intersections
 
-  if (intersects.length > 0) {
-    let intersected = intersects[0].object;
-    if (intersected.name.startsWith('polygon-')) {
-      intersected.material.opacity = 1.0; // Full opacity when hovered
-    }
-  } else if (intersectedObject) {
-    intersectedObject.material.opacity = 0.2; // Lower opacity when not hovered
-    intersectedObject = null;
-  }
-}
+//   if (intersects.length > 0) {
+//     let intersected = intersects[0].object;
+//     if (intersected.name.startsWith('polygon-')) {
+//       intersected.material.opacity = 1.0; // Full opacity when hovered
+//     }
+//   } else if (intersectedObject) {
+//     intersectedObject.material.opacity = 0.2; // Lower opacity when not hovered
+//     intersectedObject = null;
+//   }
+// }
 
 
 
@@ -597,22 +595,22 @@ const minPanSpeed = 0.05; // Minimum panning speed (when zoomed out)
 const maxPanSpeed = 0.2;  // Maximum panning speed (when zoomed in)
 
 // Function to handle panning with dynamic speed
-function panCamera(dx, dy) {
-  // Calculate dynamic pan speed based on camera's distance from the target
-  const distance = camera.position.distanceTo(controls.target);
-  const panSpeed = THREE.MathUtils.lerp(maxPanSpeed, minPanSpeed, distance / controls.maxDistance);
+// function panCamera(dx, dy) {
+//   // Calculate dynamic pan speed based on camera's distance from the target
+//   const distance = camera.position.distanceTo(controls.target);
+//   const panSpeed = THREE.MathUtils.lerp(maxPanSpeed, minPanSpeed, distance / controls.maxDistance);
 
-  // Apply the calculated pan speed
-  const deltaX = dx * panSpeed;
-  const deltaY = dy * panSpeed;
+//   // Apply the calculated pan speed
+//   const deltaX = dx * panSpeed;
+//   const deltaY = dy * panSpeed;
 
-  camera.position.x += deltaX;
-  camera.position.y += deltaY;
-  controls.target.x += deltaX;
-  controls.target.y += deltaY;
+//   camera.position.x += deltaX;
+//   camera.position.y += deltaY;
+//   controls.target.x += deltaX;
+//   controls.target.y += deltaY;
 
-  controls.update();
-}
+//   controls.update();
+// }
 
 function getBoundingBoxOfGeoJSON(geojson) {
   let minX = Infinity;
