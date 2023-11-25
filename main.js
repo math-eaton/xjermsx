@@ -19,7 +19,7 @@ function toStatePlane(lon, lat) {
 
 // Three.js - Initialize the Scene
 let scene, camera, renderer, controls, fmPropagationPolygons;
-let rotationSpeed = 0.005; // Adjust rotation speed as needed
+let rotationSpeed = 0.015; // Adjust rotation speed as needed
 let globalBoundingBox;
 
 // Define color scheme variables
@@ -40,7 +40,7 @@ function initThreeJS() {
   // const [cameraX, cameraY] = toStatePlane(-75.5268, 42.9538);
   const cameraX = 0;
   const cameraY = 0;
-  const cameraZ = 100; // Adjust this based on the scale of your scene
+  const cameraZ = 10; // Adjust this based on the scale of your scene
 
   camera.position.set(cameraX, cameraY, cameraZ);
 
@@ -59,7 +59,7 @@ function initThreeJS() {
   controls.screenSpacePanning = true;
   controls.enableRotate = true; // Enable rotation if you want to allow the user to rotate the view
   controls.enableDamping = true;
-  controls.dampingFactor = 0.1;
+  controls.dampingFactor = 0.2;
 
   // Lighting
   let ambientLight = new THREE.AmbientLight(colorScheme.ambientLightColor);
@@ -84,13 +84,13 @@ function addPolygons(geojson, stride = 10) {
   for (let i = 0; i < geojson.features.length; i += stride) {
     const feature = geojson.features[i];
 
-    // Create a new material for each polygon
+    // Material for the polygon
     const material = new THREE.MeshBasicMaterial({
       color: colorScheme.polygonColor,
       transparent: true,
       wireframe: true,
       dithering: true,
-      opacity: 0.1,
+      opacity: 0.4,
       side: THREE.FrontSide
     });
 
@@ -99,58 +99,45 @@ function addPolygons(geojson, stride = 10) {
       const vertices = [];
       let centroid = new THREE.Vector3(0, 0, 0);
 
-      // Convert coordinates to vertices and calculate centroid
       shapeCoords.forEach(coord => {
         const [x, y] = toStatePlane(coord[0], coord[1]);
-        const z = 1; // Set Z to a constant value (adjust as needed)
-        const vertex = new THREE.Vector3(x, y, z);
+        const vertex = new THREE.Vector3(x, y, 0); // Edges at Z=0
         vertices.push(vertex);
         centroid.add(vertex);
       });
 
-      centroid.divideScalar(shapeCoords.length); // Calculate the centroid
+      centroid.divideScalar(shapeCoords.length);
+      centroid.z = Math.random() * 0.12 + 0.0075; // Random height between 1 and 100
 
-      // Create the geometry for the polygon
       const shapeGeometry = new THREE.BufferGeometry();
       const positions = [];
 
-      // Create faces (triangles) for the polygon
       for (let j = 0; j < shapeCoords.length; j++) {
-        positions.push(centroid.x, centroid.y, centroid.z);
-        positions.push(vertices[j].x, vertices[j].y, vertices[j].z);
-        positions.push(vertices[(j + 1) % shapeCoords.length].x, vertices[(j + 1) % shapeCoords.length].y, vertices[(j + 1) % shapeCoords.length].z);
+        positions.push(0, 0, centroid.z); // Centroid (peak of the tent) at origin
+        positions.push(vertices[j].x - centroid.x, vertices[j].y - centroid.y, 0); // First edge vertex relative to centroid
+        positions.push(vertices[(j + 1) % shapeCoords.length].x - centroid.x, vertices[(j + 1) % shapeCoords.length].y - centroid.y, 0); // Second edge vertex relative to centroid
       }
 
       shapeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
       shapeGeometry.computeVertexNormals();
 
-      // Translate the geometry so the centroid is at the origin
-      shapeGeometry.translate(-centroid.x, -centroid.y, -centroid.z);
-
-      // Create the mesh with the geometry and material
       const mesh = new THREE.Mesh(shapeGeometry, material);
-
-      // Store the centroid and rotation rate in userData for animation
       mesh.userData = { centroid: centroid, rotationRate: Math.random() * rotationSpeed };
+      mesh.position.copy(centroid); // Set the position of the mesh to the centroid
 
-      // Translate the mesh back so it appears in the correct position
-      mesh.position.add(centroid);
-
-      // Add the mesh to the group
       fmPropagationPolygons.add(mesh);
     } catch (error) {
       console.error(`Error processing feature at index ${i}:`, error);
     }
   }
 
-  // Add the group to the scene
   scene.add(fmPropagationPolygons);
 }
 
 // Function to update rotation of polygons
 function updatePolygonsRotation() {
   fmPropagationPolygons.children.forEach(mesh => {
-    mesh.rotation.z += mesh.userData.rotationRate; // Adjust the axis if necessary
+    mesh.rotation.z += mesh.userData.rotationRate; // Rotate around the local Z-axis
   });
 }
 
@@ -166,7 +153,7 @@ function onWindowResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // Adjust zoom based on window size
-    // adjustCameraZoom();
+    adjustCameraZoom();
   }
 }
 
@@ -305,7 +292,7 @@ window.onload = function() {
       const maxDim = Math.max(size.x, size.y);
       const fov = camera.fov * (Math.PI / 180);
       let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-      cameraZ *= 0.7; // Adjust as needed
+      cameraZ *= 0.1; // Adjust as needed
       camera.position.set(center.x, center.y, cameraZ);
       controls.target.set(center.x, center.y, 0);
 
