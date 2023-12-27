@@ -14,7 +14,7 @@ export function afterDark(containerId) {
         this.width = width;
         this.height = height;
         this.windowStates = [];
-        this.horizontalSpacing = p.random(2.5, 3.5); // Random horizontal spacing
+        this.horizontalSpacing = p.random(1.0, 1.5); // Random horizontal spacing
         this.verticalSpacing = p.random(5.5, 10.0); // Random vertical spacing
     
         for (let i = 0; i < width; i++) {
@@ -24,15 +24,16 @@ export function afterDark(containerId) {
           }
         }
       }
+
     
       draw() {
-        let windowSize = 1;
+        let windowSize = 0.5;
         for (let i = 0, winX = 0; winX < this.width; i++, winX += windowSize + this.horizontalSpacing) {
           for (let j = 0, winY = 0; winY < this.height; j++, winY += windowSize + this.verticalSpacing) {
             let windowX = this.x + winX;
             let windowY = p.height - this.height + winY;
             if (this.windowStates[i] && this.windowStates[i][j]) {
-              p.set(windowX, windowY, p.color(255, 255, 0)); // Window is on
+              p.set(windowX, windowY, p.color(173, 216, 230)); // Soft blue window light
             }
           }
         }
@@ -42,7 +43,7 @@ export function afterDark(containerId) {
       updateWindows() {
         for (let i = 0; i < this.width; i++) {
           for (let j = 0; j < this.height; j++) {
-            if (p.random() < 0.01) { // Small chance to change state
+            if (p.random() < 0.005) { // Small chance to change state
               this.windowStates[i][j] = !this.windowStates[i][j];
             }
           }
@@ -58,7 +59,7 @@ export function afterDark(containerId) {
     
       // Update stars
       stars.forEach(star => {
-        if (p.random() < 0.05) { // Small chance for each star to change state
+        if (p.random() < 0.01) { // Small chance for each star to change state
           star.on = !star.on;
         }
       });
@@ -108,14 +109,14 @@ export function afterDark(containerId) {
         // Calculate the likelihood of placing a star based on its vertical position
         let starDensityFactor = starY / (p.height - shortestBuildingHeight);
         if (p.random() < starDensityFactor) {
-          p.set(starX, starY, p.color(255)); // Place a star with full brightness
+          p.set(starX, starY, p.color(50)); // Place a star with full brightness
         }
       }
       p.updatePixels(); // Update the pixel buffer after setting pixels
     
       // Initialize flickering stars
       stars = [];
-      for (let i = 0; i < 10000; i++) {
+      for (let i = 0; i < 1000; i++) {
         let x = p.random(p.width);
         let y = p.random(p.height - shortestBuildingHeight);
         let star = {
@@ -137,23 +138,22 @@ export function afterDark(containerId) {
       p.background(0);
       p.loadPixels(); // Load the pixel buffer
     
-      // Draw buildings
-      buildings.forEach(building => {
-        building.draw();
-      });
-    
       // Draw stars
       stars.forEach(star => {
         if (star.on) {
-          let brightness = p.map(star.y, 0, p.height, 255, 150); // Brightness based on y position
+          let brightness = p.map(star.y, 0, p.height, 255, 50); // Brightness based on y position
           p.set(star.x, star.y, p.color(brightness));
         }
       });
     
+      // Draw buildings on top of stars
+      buildings.forEach(building => {
+        building.draw();
+      });
+    
       p.updatePixels(); // Update the pixel buffer
     };
-    
-    
+        
     p.windowResized = () => {
       let containerDiv = document.getElementById(containerId);
       if (containerDiv) {
@@ -191,7 +191,7 @@ export function afterDark(containerId) {
 
       // Reinitialize and regenerate stars
       let shortestBuildingHeight = Math.min(...buildings.map(b => b.height));
-      for (let i = 0; i < 10000; i++) {
+      for (let i = 0; i < 1000; i++) {
         let starX = p.random(p.width);
         let starY = p.random(p.height - shortestBuildingHeight);
         let starDensityFactor = 1 - (starY / (p.height - shortestBuildingHeight));
