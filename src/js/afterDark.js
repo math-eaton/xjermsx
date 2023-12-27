@@ -13,7 +13,10 @@ export function afterDark(containerId) {
         this.x = x;
         this.width = width;
         this.height = height;
-        this.windowStates = []; // Array to store the state of each window
+        this.windowStates = [];
+        this.horizontalSpacing = p.random(2.5, 3.5); // Random horizontal spacing
+        this.verticalSpacing = p.random(5.5, 10.0); // Random vertical spacing
+    
         for (let i = 0; i < width; i++) {
           this.windowStates[i] = [];
           for (let j = 0; j < height; j++) {
@@ -24,18 +27,17 @@ export function afterDark(containerId) {
     
       draw() {
         let windowSize = 1;
-        let windowSpacing = 5;
-        for (let i = 0; i < this.width; i += windowSize + windowSpacing) {
-          for (let j = 0; j < this.height; j += windowSize + windowSpacing) {
-            let windowX = this.x + i;
-            let windowY = p.height - this.height + j;
-            if (this.windowStates[i][j]) {
+        for (let i = 0, winX = 0; winX < this.width; i++, winX += windowSize + this.horizontalSpacing) {
+          for (let j = 0, winY = 0; winY < this.height; j++, winY += windowSize + this.verticalSpacing) {
+            let windowX = this.x + winX;
+            let windowY = p.height - this.height + winY;
+            if (this.windowStates[i] && this.windowStates[i][j]) {
               p.set(windowX, windowY, p.color(255, 255, 0)); // Window is on
             }
           }
         }
       }
-    
+                
       // Method to randomly update window states
       updateWindows() {
         for (let i = 0; i < this.width; i++) {
