@@ -8,6 +8,7 @@ export function afterDark(containerId) {
     let stars = []; 
     let panSpeed = 1; // Speed at which the skyline pans
     let starPanSpeed = panSpeed * 0.1; // Stars pan at 5% of skyline speed
+    let hasGap
     
 
     // Define a Building class
@@ -17,8 +18,9 @@ export function afterDark(containerId) {
         this.width = width;
         this.height = height;
         this.windowStates = [];
-        this.horizontalSpacing = p.random(1.0, 1.5); // Random horizontal spacing
-        this.verticalSpacing = p.random(5.5, 10.0); // Random vertical spacing
+        this.horizontalSpacing = p.random(1.0, 2.0); // Random horizontal spacing
+        this.verticalSpacing = p.random(5.5, 20.0); // Random vertical spacing
+        this.hasGap = hasGap; // New property for gap
     
         // Initialize window states
         for (let i = 0; i < width; i++) {
@@ -30,12 +32,18 @@ export function afterDark(containerId) {
       }
     
       draw() {
+      if (this.hasGap) {
+        p.noStroke();
+        p.fill(0); // Black color for the gap
+        p.rect(this.x - 5, p.height - this.height, 10, this.height); // Draw a vertical black gap
+        }
         // Draw building outline for debugging
         p.noFill();
         p.stroke(255, 0, 0); // Red outline
         p.rect(this.x, p.height - this.height, this.width, this.height);
     
         const windowSize = 0.5; // Size of a window
+
         // Loop through each window position
         for (let i = 0, winX = 0; winX < this.width; i++, winX += windowSize + this.horizontalSpacing) {
           for (let j = 0, winY = 0; winY < this.height; j++, winY += windowSize + this.verticalSpacing) {
@@ -45,7 +53,7 @@ export function afterDark(containerId) {
             if (windowX >= 0 && windowX < p.width && windowY >= 0 && windowY < p.height) { // Check if the window is within the canvas
               if (this.windowStates[i] && this.windowStates[i][j]) {
                 // Use color coding for debugging
-                let col = (i + j) % 2 === 0 ? p.color(173, 216, 230) : p.color(255, 215, 0); // Alternating colors
+                let col = (i + j) % 2 === 0 ? p.color(255, 255, 255) : p.color(200, 190, 210); // Alternating colors
                 p.set(windowX, windowY, col);
               }
             }
@@ -100,10 +108,13 @@ function generateNewBuildings() {
     let buildingWidth = p.random(p.width * 0.05, p.width * 0.1);
     let buildingHeight = p.random(p.height * 0.15, p.height * 0.7);
 
-    let newBuilding = new Building(startPosition, buildingWidth, buildingHeight);
+    // Determine if this building should have a gap
+    let hasGap = p.random() < 0.2; // 20% chance for a gap
+
+    let newBuilding = new Building(startPosition, buildingWidth, buildingHeight, hasGap);
     buildings.push(newBuilding);
 
-    startPosition += buildingWidth;
+    startPosition += buildingWidth + (hasGap ? 50 : 0); // Add extra space for the gap
   }
 }
 
