@@ -6,6 +6,9 @@ export function afterDark(containerId) {
     let canvasDiv;
     let buildings = [];
     let stars = []; 
+    let panSpeed = 1; // Speed at which the skyline pans
+    let starPanSpeed = panSpeed * 0.05; // Stars pan at 5% of skyline speed
+    
 
     // Define a Building class
     class Building {
@@ -17,6 +20,7 @@ export function afterDark(containerId) {
         this.horizontalSpacing = p.random(1.0, 1.5); // Random horizontal spacing
         this.verticalSpacing = p.random(5.5, 10.0); // Random vertical spacing
     
+        // Initialize window states
         for (let i = 0; i < width; i++) {
           this.windowStates[i] = [];
           for (let j = 0; j < height; j++) {
@@ -24,10 +28,9 @@ export function afterDark(containerId) {
           }
         }
       }
-
     
       draw() {
-        let windowSize = 0.5;
+        const windowSize = 0.5; // Size of a window
         for (let i = 0, winX = 0; winX < this.width; i++, winX += windowSize + this.horizontalSpacing) {
           for (let j = 0, winY = 0; winY < this.height; j++, winY += windowSize + this.verticalSpacing) {
             let windowX = this.x + winX;
@@ -38,7 +41,7 @@ export function afterDark(containerId) {
           }
         }
       }
-                
+    
       // Method to randomly update window states
       updateWindows() {
         for (let i = 0; i < this.width; i++) {
@@ -49,8 +52,13 @@ export function afterDark(containerId) {
           }
         }
       }
+    
+      // Method to move the building horizontally
+      pan(delta) {
+        this.x -= delta;
+      }
     }
-
+    
     function updateScene() {
       // Update building windows
       buildings.forEach(building => {
@@ -64,6 +72,27 @@ export function afterDark(containerId) {
         }
       });
     }    
+
+    function generateNewBuildings() {
+      // Define a buffer distance for new building generation
+      let buildingWidthBuffer = 100; // Adjust this value as needed
+    
+      // Find the rightmost edge of the last building
+      let lastBuilding = buildings[buildings.length - 1];
+      let rightmostEdge = lastBuilding.x + lastBuilding.width;
+    
+      // Check if there's enough space beyond the visible canvas to add a new building
+      if (rightmostEdge <= p.width) {
+        // Start the new building just beyond the rightmost edge of the last building
+        let newBuildingX = rightmostEdge; 
+        let buildingWidth = p.random(p.width * 0.05, p.width * 0.1);
+        let buildingHeight = p.random(p.height * 0.15, p.height * 0.7);
+    
+        let newBuilding = new Building(newBuildingX, buildingWidth, buildingHeight);
+        buildings.push(newBuilding);
+      }
+    }
+            
 
     p.setup = () => {
       let containerDiv = document.getElementById(containerId);
@@ -87,8 +116,8 @@ export function afterDark(containerId) {
       buildings = [];
       let x = 0;
       while (x < p.width) {
-        let minWidth = p.width * 0.1; // Minimum building width
-        let maxWidth = p.width * 0.01; // Maximum building width
+        let minWidth = p.width * 0.05; // Minimum building width
+        let maxWidth = p.width * 0.1; // Maximum building width
         let buildingWidth = p.random(minWidth, maxWidth); // Random building width
         let minHeight = p.height * 0.15; // Minimum height as a percentage of screen height
         let maxHeight = p.height * 0.7; // Maximum height as a percentage of screen height
@@ -135,30 +164,47 @@ export function afterDark(containerId) {
     };
     
     p.draw = () => {
+      // Pan and draw buildings
       p.background(0);
-      p.loadPixels(); // Load the pixel buffer
-    
-      // Draw stars
+      p.loadPixels();
+      buildings.forEach(building => {
+        building.pan(panSpeed);
+        building.draw();
+      });
+
+      // Remove buildings that have moved off screen
+      buildings = buildings.filter(building => building.x + building.width > 0);
+
+      // Generate new buildings
+      generateNewBuildings();
+
+
+      // Pan and draw stars
       stars.forEach(star => {
+        star.x -= starPanSpeed;
         if (star.on) {
-          let brightness = p.map(star.y, 0, p.height, 255, 50); // Brightness based on y position
+          let brightness = p.map(star.y, 0, p.height, 255, 50);
           p.set(star.x, star.y, p.color(brightness));
         }
       });
-    
-      // Draw buildings on top of stars
-      buildings.forEach(building => {
-        building.draw();
+
+      // Wrap stars around
+      stars.forEach(star => {
+        if (star.x < 0) star.x += p.width;
       });
-    
-      p.updatePixels(); // Update the pixel buffer
+
+      p.updatePixels();
     };
+
+    
         
     p.windowResized = () => {
       let containerDiv = document.getElementById(containerId);
       if (containerDiv) {
         let rect = containerDiv.getBoundingClientRect();
-        p.resizeCanvas(rect.width, rect.height);
+        if (rect.width > 0 && rect.height > 0) {
+          p.resizeCanvas(rect.width, rect.height);
+      }
       } else {
         p.resizeCanvas(p.windowWidth, p.windowHeight);
       }

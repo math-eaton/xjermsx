@@ -102,3 +102,13 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+#skylineContainer1 {
+  width: 100vw; 
+  height: 100vh;
+}
+
+#skyline3DContainer1 {
+  width: 100vw; 
+  height: 100vh;
+}
