@@ -11,8 +11,8 @@ export function afterDark3D(containerId) {
 
 
   class Building {
-    constructor(x, width, height, z) {
-        const geometry = new THREE.BoxGeometry(width, height, 10);
+    constructor(x, width, height, depth, z) {
+        const geometry = new THREE.BoxGeometry(width, height, depth);
 
         // Solid Mesh
         this.solidMesh = new THREE.Mesh(
@@ -57,7 +57,6 @@ export function afterDark3D(containerId) {
             transparent: true
         });
         
-        // Points Mesh
         // Points Mesh
         this.pointsMesh = new THREE.Points(pointsGeometry, pointsMaterial);
         this.pointsMesh.position.set(x, height / 2, z);
@@ -144,27 +143,43 @@ export function afterDark3D(containerId) {
   }
 
   function addBuildings() {
-    let xStart = -150;
-    let xEnd = 100; // Define the end limit for x
-    let zPositions = [-200, -180, -160, -140, -120, -100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100, 120];
-    let minWidth = 5;
-    let maxWidth = 15;
-    let minGap = 1;
-    let maxGap = 15;
-    let depthIncrement = 5; // Increment value for depth
+    // Calculate layout parameters based on viewport size
+    let viewportWidth = window.innerWidth;
+    let viewportHeight = window.innerHeight;
 
-    zPositions.forEach((z, index) => {
+    // Adjust starting and ending positions based on viewport size
+    let xStart = -viewportWidth / 4;  // Example: start at a quarter width to the left
+    let xEnd = viewportWidth / 4;     // Example: end at a quarter width to the right
+    let zStart = -viewportHeight / 10; // Example: start a bit towards the top
+    let zDepth = 10;                   // Depth of each row
+    let zRows = Math.ceil(viewportHeight / 10); // Number of rows based on viewport height
+
+    // Adjust building parameters
+    let minWidth = 5;
+    let maxWidth = 25;
+    let minDepth = 10;
+    let maxDepth = 25;
+    let minGap = maxWidth;
+    let maxGap = viewportWidth / 4;
+
+    let zPositions = Array.from({ length: zRows }, (_, index) => zStart + index * zDepth);
+
+    // Clear any existing buildings from the scene
+    clearBuildings();
+
+    // Create buildings based on the new layout
+    zPositions.forEach(z => {
         let x = xStart;
-        let depth = 10 + index * depthIncrement; // Calculate depth based on row index
 
         while (x < xEnd) {
             let width = minWidth + Math.random() * (maxWidth - minWidth);
             let height = Math.random() * 50 + 20;
+            let depth = minDepth + Math.random() * (maxDepth - minDepth);
             let building = new Building(x, width, height, depth, z);
             buildings.push(building);
 
             let gap = minGap + Math.random() * (maxGap - minGap);
-            x += width + gap; // Move x for the next building
+            x += width + gap;
         }
     });
 }
@@ -190,7 +205,23 @@ export function afterDark3D(containerId) {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-  }
+
+    // Clear existing buildings
+    clearBuildings();
+
+    // Recalculate and add buildings based on new window size
+    addBuildings();
+}
+
+function clearBuildings() {
+    buildings.forEach(building => {
+        // Remove meshes from the scene
+        scene.remove(building.solidMesh);
+        scene.remove(building.wireframeMesh);
+        scene.remove(building.pointsMesh);
+    });
+    buildings = []; // Clear the buildings array
+}
 
   setupThreeJS();
   addBuildings();
