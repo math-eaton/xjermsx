@@ -15,6 +15,18 @@ export function afterDark3D(containerId) {
     constructor(x, width, height, depth, z) {
         const geometry = new THREE.BoxGeometry(width, height, depth);
 
+        this.meshes = []; 
+
+        // Create triangulated meshes for each face and store references
+        ['front', 'back', 'left', 'right', 'top', 'bottom'].forEach(face => {
+            const facePoints = this.createFacePoints(width, height, depth, face);
+            const mesh = createMeshFromPoints(facePoints);
+            mesh.position.set(x, height / 2, z);
+            scene.add(mesh);
+            this.meshes.push(mesh); // Store reference to the mesh
+        });
+
+
         // Solid Mesh
         this.solidMesh = new THREE.Mesh(
             geometry,
@@ -22,13 +34,13 @@ export function afterDark3D(containerId) {
                 color: 0x029392,
                 transparent: false,
                 alphaHash: true,
-                opacity: 0.85,
+                opacity: 0.1,
              })
         );
         this.solidMesh.position.set(x, height / 2, z);
         scene.add(this.solidMesh);
 
-        // Wireframe Mesh
+        // Wireframe poly Mesh
         this.wireframeMesh = new THREE.Mesh(
             geometry,
             new THREE.MeshBasicMaterial({ 
@@ -39,6 +51,9 @@ export function afterDark3D(containerId) {
         );
         this.wireframeMesh.position.set(x, height / 2, z);
         scene.add(this.wireframeMesh);
+        // Add solidMesh and wireframeMesh to the meshes array
+        this.meshes.push(this.solidMesh, this.wireframeMesh);
+
 
         // Points Geometry
         // Create points for each face
@@ -67,6 +82,9 @@ export function afterDark3D(containerId) {
         this.pointsMesh = new THREE.Points(pointsGeometry, pointsMaterial);
         this.pointsMesh.position.set(x, height / 2, z);
         scene.add(this.pointsMesh);
+        // Add pointsMesh to the meshes array
+        this.meshes.push(this.pointsMesh);
+        
     }
 
     createFacePoints(width, height, depth, face) {
@@ -137,16 +155,16 @@ export function afterDark3D(containerId) {
     }
             
     pan(delta) {
-        // Update position for all meshes including points
-        this.solidMesh.position.x -= delta;
-        this.wireframeMesh.position.x -= delta;
-        this.pointsMesh.position.x -= delta;
+        // Update position for all meshes including triangulated ones
+        this.meshes.forEach(mesh => {
+            mesh.position.x -= delta;
+        });
 
         // Reuse buildings logic
         if (this.solidMesh.position.x < -100) {
-            this.solidMesh.position.x += 200;
-            this.wireframeMesh.position.x += 200;
-            this.pointsMesh.position.x += 200;
+            this.meshes.forEach(mesh => {
+                mesh.position.x += 200;
+            });
         }
     }
 }
@@ -207,6 +225,34 @@ export function afterDark3D(containerId) {
         }
     });
 }
+
+// delaunay mesh
+function createMeshFromPoints(points) {
+    let delaunayPoints = [];
+    for (let i = 0; i < points.length; i += 3) {
+        delaunayPoints.push([points[i], points[i + 1]]);
+    }
+
+    const delaunay = Delaunay.from(delaunayPoints);
+    const triangles = delaunay.triangles;
+
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    for (let i = 0; i < triangles.length; i += 3) {
+        vertices.push(
+            points[triangles[i] * 3], points[triangles[i] * 3 + 1], points[triangles[i] * 3 + 2],
+            points[triangles[i + 1] * 3], points[triangles[i + 1] * 3 + 1], points[triangles[i + 1] * 3 + 2],
+            points[triangles[i + 2] * 3], points[triangles[i + 2] * 3 + 1], points[triangles[i + 2] * 3 + 2]
+        );
+    }
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    const material = new THREE.MeshBasicMaterial({ 
+        color: 0x00FF00, 
+        wireframe: true,
+     });
+    return new THREE.Mesh(geometry, material);
+}
+
           
   function zoomOrthographicCamera(scaleFactor) {
     camera.left *= scaleFactor;
