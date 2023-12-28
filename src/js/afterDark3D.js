@@ -65,45 +65,63 @@ export function afterDark3D(containerId) {
 
     createFacePoints(width, height, depth, face) {
         const points = [];
-        const gridX = 10; // Adjust as needed
-        const gridY = 10; // Adjust as needed
-        const stepX = width / gridX;
-        const stepY = height / gridY;
-        const stepZ = depth / gridX; // Assuming depth uses the same grid as width for simplicity
+        const pointsPerUnit = 0.3; // Adjust this for more or fewer points
     
+        let gridX, gridY;
+    
+        // Determine grid size based on face dimensions
+        switch (face) {
+            case 'front':
+            case 'back':
+                gridX = Math.ceil(width * pointsPerUnit);
+                gridY = Math.ceil(height * pointsPerUnit);
+                break;
+            case 'left':
+            case 'right':
+                gridX = Math.ceil(depth * pointsPerUnit);
+                gridY = Math.ceil(height * pointsPerUnit);
+                break;
+            case 'top':
+            case 'bottom':
+                gridX = Math.ceil(width * pointsPerUnit);
+                gridY = Math.ceil(depth * pointsPerUnit);
+                break;
+        }
+    
+        // Adjust loop to cover the entire face area
         for (let i = 0; i <= gridX; i++) {
             for (let j = 0; j <= gridY; j++) {
                 let posX, posY, posZ;
-                switch (face) {
+                    switch (face) {
                     case 'front':
-                        posX = (i * stepX) - width / 2;
-                        posY = (j * stepY) - height / 2;
-                        posZ = depth / 2 + 0.1;
+                        posX = (i * width / gridX) - width / 2;
+                        posY = (j * height / gridY) - height / 2;
+                        posZ = depth / 2;
                         break;
                     case 'back':
-                        posX = (i * stepX) - width / 2;
-                        posY = (j * stepY) - height / 2;
+                        posX = (i * width / gridX) - width / 2;
+                        posY = (j * height / gridY) - height / 2;
                         posZ = -depth / 2;
                         break;
                     case 'left':
                         posX = -width / 2;
-                        posY = (j * stepY) - height / 2;
-                        posZ = (i * stepZ) - depth / 2;
+                        posY = (j * height / gridY) - height / 2;
+                        posZ = (i * depth / gridX) - depth / 2;
                         break;
                     case 'right':
                         posX = width / 2;
-                        posY = (j * stepY) - height / 2;
-                        posZ = (i * stepZ) - depth / 2;
+                        posY = (j * height / gridY) - height / 2;
+                        posZ = (i * depth / gridX) - depth / 2;
                         break;
                     case 'top':
-                        posX = (i * stepX) - width / 2;
+                        posX = (i * width / gridX) - width / 2;
                         posY = height / 2;
-                        posZ = (j * stepZ) - depth / 2;
+                        posZ = (j * depth / gridY) - depth / 2;
                         break;
                     case 'bottom':
-                        posX = (i * stepX) - width / 2;
+                        posX = (i * width / gridX) - width / 2;
                         posY = -height / 2;
-                        posZ = (j * stepZ) - depth / 2;
+                        posZ = (j * depth / gridY) - depth / 2;
                         break;
                 }
                 points.push(posX, posY, posZ);
@@ -111,7 +129,7 @@ export function afterDark3D(containerId) {
         }
         return points;
     }
-    
+            
     pan(delta) {
         // Update position for all meshes including points
         this.solidMesh.position.x -= delta;
