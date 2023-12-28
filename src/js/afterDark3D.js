@@ -10,6 +10,10 @@ export function afterDark3D(containerId) {
   let panSpeed = 0.05;
   let depth = 10; 
   let myAppFont; // Global variable to store the font
+  let charGeometries = {};
+  let charMaterials = {};
+  let strokeMaterials = {};
+
 
 
   class Building {
@@ -202,8 +206,9 @@ function setupThreeJS() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById(containerId).appendChild(renderer.domElement);
     const fontLoader = new FontLoader();
-    fontLoader.load('public/font/helvetiker_regular.typeface.json', function (font) {
-        myAppFont = font; // Store the loaded font globally
+    fontLoader.load('font/optimer_regular.typeface.json', function (font) {
+        myAppFont = font;
+        initializeCharGeometries(); // Pre-create geometries and materials
         addBuildings(); // Create buildings now that the font is loaded
         addTextSprites(); // Create text sprites now that the font is loaded
         animate();
@@ -313,7 +318,7 @@ function createMeshFromPoints(points) {
 }
 
 function addTextSprites() {
-    const word = 'xjermsx';
+    const word = 'xjermsx'; // Word to be displayed
     const charSize = 4; // Size of each character
     const charSpacingX = 10; // Horizontal spacing between characters
     const charSpacingZ = 10; // Vertical spacing between characters
@@ -330,8 +335,9 @@ function addTextSprites() {
     for (let i = 0; i < numCharsX; i++) {
         for (let j = 0; j < numCharsZ; j++) {
             const charIndex = (i + j) % word.length; // Cycle through the word
+            const character = word[charIndex];
             const position = new THREE.Vector3(startX + i * charSpacingX, 0.5, startZ + j * charSpacingZ);
-            const textMesh = createTextMesh(word[charIndex], position, charSize);
+            const textMesh = createTextMesh(character, position, charSize);
             if (textMesh) {
                 scene.add(textMesh);
             }
@@ -339,45 +345,53 @@ function addTextSprites() {
     }
 }
 
+
 function createTextMesh(character, position, size) {
-    if (!myAppFont) {
-        console.error("Font is not loaded yet.");
+    if (!myAppFont || !charGeometries[character]) {
+        console.error("Font is not loaded or character geometry is not created yet.");
         return;
     }
 
-    // Fill Geometry and Material
-    const fillGeometry = new TextGeometry(character, {
-        font: myAppFont,
-        size: size,
-        height: 0.2,
-        curveSegments: 12,
-        bevelEnabled: false
-    });
-    const fillMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Set fill color
-    const fillMesh = new THREE.Mesh(fillGeometry, fillMaterial);
+    const fillMesh = new THREE.Mesh(charGeometries[character], charMaterials[character]);
+    fillMesh.position.set(0, 0, 0); // Position set to 0 since group will be positioned
+    fillMesh.rotation.x = -Math.PI / 2;
 
-    // Stroke Geometry and Material
-    const strokeGeometry = new TextGeometry(character, {
-        font: myAppFont,
-        size: size * 1.05, // Slightly larger for the stroke effect
-        height: 0.2,
-        curveSegments: 12,
-        bevelEnabled: false
-    });
-    const strokeMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Set stroke color
-    const strokeMesh = new THREE.Mesh(strokeGeometry, strokeMaterial);
-
-    // Position and rotate the meshes
-    fillMesh.position.set(position.x, position.y, position.z);
-    strokeMesh.position.set(position.x, position.y - 0.1, position.z); // Slightly lower to avoid z-fighting
-    fillMesh.rotation.x = strokeMesh.rotation.x = -Math.PI / 2;
+    const strokeMesh = new THREE.Mesh(charGeometries[character], strokeMaterials[character]);
+    strokeMesh.position.set(0, -0.1, 0); // Slightly lower to avoid z-fighting
+    strokeMesh.rotation.x = -Math.PI / 2;
+    strokeMesh.scale.multiplyScalar(1.05); // Scale up for stroke effect
 
     // Group the fill and stroke meshes
     const textGroup = new THREE.Group();
     textGroup.add(strokeMesh);
     textGroup.add(fillMesh);
 
+    // Position the group
+    textGroup.position.set(position.x, position.y, position.z);
+
     return textGroup;
+}
+
+function initializeCharGeometries() {
+    const word = 'xjermsx';
+    const size = 4;
+    const height = 0.2;
+    const curveSegments = 6; // Reduced for performance
+
+    word.split('').forEach(char => {
+        if (!charGeometries[char]) {
+            charGeometries[char] = new TextGeometry(char, {
+                font: myAppFont,
+                size: size,
+                height: height,
+                curveSegments: curveSegments,
+                bevelEnabled: false
+            });
+
+            charMaterials[char] = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Fill color
+            strokeMaterials[char] = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Stroke color
+        }
+    });
 }
 
 
