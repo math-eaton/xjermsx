@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { Delaunay } from 'd3-delaunay';
 
 export function afterDark3D(containerId) {
@@ -7,8 +9,7 @@ export function afterDark3D(containerId) {
   let stars = [];
   let panSpeed = 0.05;
   let depth = 10; 
-
-
+  let myAppFont; // Global variable to store the font
 
 
   class Building {
@@ -31,8 +32,8 @@ export function afterDark3D(containerId) {
         this.solidMesh = new THREE.Mesh(
             geometry,
             new THREE.MeshBasicMaterial({ 
-                color: 0x029392,
-                transparent: false,
+                color: 0x000000,
+                transparent: true,
                 alphaHash: true,
                 opacity: 0.1,
              })
@@ -71,9 +72,9 @@ export function afterDark3D(containerId) {
 
         // Points Material
         const pointsMaterial = new THREE.PointsMaterial({
-            color: 0x000000, // Bright green for visibility
-            size: 4,
-            opacity: 0.95,
+            color: 0x000000,
+            size: 5,
+            opacity: 0.666,
             transparent: true,
             alphaHash: true,
         });
@@ -84,7 +85,21 @@ export function afterDark3D(containerId) {
         scene.add(this.pointsMesh);
         // Add pointsMesh to the meshes array
         this.meshes.push(this.pointsMesh);
-        
+
+        // Add text at the base of the building
+        if (myAppFont) {
+            const textGeometry = new TextGeometry('', {
+                font: myAppFont,
+                size: 3.5, // Adjust size as needed
+                height: 0.5
+            });
+            const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(x, 0, z); // Adjust position as needed
+            scene.add(textMesh);
+            this.meshes.push(textMesh);
+        }
+           
     }
 
     createFacePoints(width, height, depth, face) {
@@ -155,21 +170,25 @@ export function afterDark3D(containerId) {
     }
             
     pan(delta) {
-        // Update position for all meshes including triangulated ones
-        this.meshes.forEach(mesh => {
+        this.meshes = this.meshes.filter(mesh => {
+            // Update position
             mesh.position.x -= delta;
-        });
 
-        // Reuse buildings logic
-        if (this.solidMesh.position.x < -100) {
-            this.meshes.forEach(mesh => {
+            // Check if the mesh is out of bounds
+            if (mesh.position.x < -100) {
                 mesh.position.x += 200;
-            });
-        }
+                return true;  // Keep the mesh in the array
+            } else if (mesh.position.x > 100) {
+                scene.remove(mesh); // Remove mesh from the scene
+                return false; // Remove mesh from the array
+            }
+
+            return true; // Keep the mesh in the array
+        });
     }
 }
 
-  function setupThreeJS() {
+function setupThreeJS() {
     scene = new THREE.Scene();
     camera = new THREE.OrthographicCamera(
       window.innerWidth / -2, window.innerWidth / 2,
@@ -182,9 +201,16 @@ export function afterDark3D(containerId) {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.getElementById(containerId).appendChild(renderer.domElement);
-  }
+    const fontLoader = new FontLoader();
+    fontLoader.load('public/font/helvetiker_regular.typeface.json', function (font) {
+        myAppFont = font; // Store the loaded font globally
+        addBuildings(); // Create buildings now that the font is loaded
+        addTextSprites(); // Create text sprites now that the font is loaded
+        animate();
+    });
+}
 
-  function addBuildings() {
+function addBuildings() {
     // Calculate layout parameters based on viewport size
     let viewportWidth = window.innerWidth;
     let viewportHeight = window.innerHeight;
@@ -225,6 +251,7 @@ export function afterDark3D(containerId) {
         }
     });
 }
+
 
 // delaunay mesh
 function createMeshFromPoints(points) {
@@ -276,19 +303,89 @@ function createMeshFromPoints(points) {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Clear existing buildings
+    // Clear existing text and buildings
     clearBuildings();
+    clearText(); // Implement this function to remove existing text meshes
 
-    // Recalculate and add buildings based on new window size
+    // Recalculate and add buildings and text based on new window size
     addBuildings();
+    addTextSprites();
 }
+
+function addTextSprites() {
+    const word = 'xjermsx';
+    const charSize = 4; // Size of each character
+    const charSpacingX = 10; // Horizontal spacing between characters
+    const charSpacingZ = 10; // Vertical spacing between characters
+
+    // Calculate how many characters can fit in the viewport
+    const numCharsX = Math.floor(window.innerWidth / charSpacingX);
+    const numCharsZ = Math.floor(window.innerHeight / charSpacingZ);
+
+    // Calculate starting positions
+    const startX = -(numCharsX * charSpacingX) / 2;
+    const startZ = -(numCharsZ * charSpacingZ) / 2;
+
+    // Create text meshes in a grid
+    for (let i = 0; i < numCharsX; i++) {
+        for (let j = 0; j < numCharsZ; j++) {
+            const charIndex = (i + j) % word.length; // Cycle through the word
+            const position = new THREE.Vector3(startX + i * charSpacingX, 0.5, startZ + j * charSpacingZ);
+            const textMesh = createTextMesh(word[charIndex], position, charSize);
+            if (textMesh) {
+                scene.add(textMesh);
+            }
+        }
+    }
+}
+
+function createTextMesh(character, position, size) {
+    if (!myAppFont) {
+        console.error("Font is not loaded yet.");
+        return;
+    }
+
+    // Fill Geometry and Material
+    const fillGeometry = new TextGeometry(character, {
+        font: myAppFont,
+        size: size,
+        height: 0.2,
+        curveSegments: 12,
+        bevelEnabled: false
+    });
+    const fillMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Set fill color
+    const fillMesh = new THREE.Mesh(fillGeometry, fillMaterial);
+
+    // Stroke Geometry and Material
+    const strokeGeometry = new TextGeometry(character, {
+        font: myAppFont,
+        size: size * 1.05, // Slightly larger for the stroke effect
+        height: 0.2,
+        curveSegments: 12,
+        bevelEnabled: false
+    });
+    const strokeMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Set stroke color
+    const strokeMesh = new THREE.Mesh(strokeGeometry, strokeMaterial);
+
+    // Position and rotate the meshes
+    fillMesh.position.set(position.x, position.y, position.z);
+    strokeMesh.position.set(position.x, position.y - 0.1, position.z); // Slightly lower to avoid z-fighting
+    fillMesh.rotation.x = strokeMesh.rotation.x = -Math.PI / 2;
+
+    // Group the fill and stroke meshes
+    const textGroup = new THREE.Group();
+    textGroup.add(strokeMesh);
+    textGroup.add(fillMesh);
+
+    return textGroup;
+}
+
 
 function clearBuildings() {
     buildings.forEach(building => {
-        // Remove meshes from the scene
-        scene.remove(building.solidMesh);
-        scene.remove(building.wireframeMesh);
-        scene.remove(building.pointsMesh);
+        building.meshes.forEach(mesh => {
+            scene.remove(mesh); // Remove each mesh from the scene
+        });
     });
     buildings = []; // Clear the buildings array
 }
