@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { Delaunay } from 'd3-delaunay';
 
 export function afterDark3D(containerId) {
   let scene, camera, renderer;
@@ -19,9 +20,9 @@ export function afterDark3D(containerId) {
             geometry,
             new THREE.MeshBasicMaterial({ 
                 color: 0x029392,
-                transparent: true,
+                transparent: false,
                 alphaHash: true,
-                opacity: 0.8,
+                opacity: 0.85,
              })
         );
         this.solidMesh.position.set(x, height / 2, z);
@@ -30,7 +31,11 @@ export function afterDark3D(containerId) {
         // Wireframe Mesh
         this.wireframeMesh = new THREE.Mesh(
             geometry,
-            new THREE.MeshDepthMaterial({ color: 0x000000, wireframe: true })
+            new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, 
+                wireframe: true,
+                transparent: true,
+                opacity: 0 })
         );
         this.wireframeMesh.position.set(x, height / 2, z);
         scene.add(this.wireframeMesh);
@@ -51,10 +56,11 @@ export function afterDark3D(containerId) {
 
         // Points Material
         const pointsMaterial = new THREE.PointsMaterial({
-            color: 0x00FF00, // Bright green for visibility
-            size: 5,
-            opacity: 0.5,
-            transparent: true
+            color: 0x000000, // Bright green for visibility
+            size: 4,
+            opacity: 0.95,
+            transparent: true,
+            alphaHash: true,
         });
         
         // Points Mesh
@@ -65,7 +71,7 @@ export function afterDark3D(containerId) {
 
     createFacePoints(width, height, depth, face) {
         const points = [];
-        const pointsPerUnit = 0.3; // Adjust this for more or fewer points
+        const pointsPerUnit = 1; // Adjust this for more or fewer points
     
         let gridX, gridY;
     
