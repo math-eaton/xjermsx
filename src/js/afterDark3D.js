@@ -7,12 +7,13 @@ export function afterDark3D(containerId) {
   let scene, camera, renderer;
   let buildings = [];
   let stars = [];
-  let panSpeed = 0.05;
+  let panSpeed = 0.1;
   let depth = 10; 
   let myAppFont; // Global variable to store the font
   let charGeometries = {};
   let charMaterials = {};
   let strokeMaterials = {};
+  let textEntities = [];
 
 
 
@@ -223,9 +224,9 @@ function addBuildings() {
     // Adjust starting and ending positions based on viewport size
     let xStart = -viewportWidth / 4;  // Example: start at a quarter width to the left
     let xEnd = viewportWidth / 4;     // Example: end at a quarter width to the right
-    let zStart = -viewportHeight / 10; // Example: start a bit towards the top
+    let zStart = -viewportHeight / 2; // Example: start a bit towards the top
     let zDepth = 10;                   // Depth of each row
-    let zRows = Math.ceil(viewportHeight / 10); // Number of rows based on viewport height
+    let zRows = Math.ceil(viewportHeight / 2); // Number of rows based on viewport height
 
     // Adjust building parameters
     let minWidth = 5;
@@ -239,6 +240,7 @@ function addBuildings() {
 
     // Clear any existing buildings from the scene
     clearBuildings();
+    clearTextEntities();
 
     // Create buildings based on the new layout
     zPositions.forEach(z => {
@@ -298,10 +300,14 @@ function createMeshFromPoints(points) {
   function animate() {
     requestAnimationFrame(animate);
 
-
+    // Update buildings
     buildings.forEach(building => building.pan(panSpeed));
+
+    // Update text entities
+    panTextEntities(panSpeed);
+
     renderer.render(scene, camera);
-  }
+}
 
   function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -314,14 +320,25 @@ function createMeshFromPoints(points) {
 
     // Recalculate and add buildings and text based on new window size
     addBuildings();
+
+    // Clear and regenerate text entities
+    textEntities.forEach(textEntity => scene.remove(textEntity));
+    textEntities = [];
     addTextSprites();
+    
 }
+
+function clearTextEntities() {
+    textEntities.forEach(textEntity => scene.remove(textEntity));
+    textEntities = [];
+}
+
 
 function addTextSprites() {
     const word = 'xjermsx'; // Word to be displayed
-    const charSize = 4; // Size of each character
-    const charSpacingX = 10; // Horizontal spacing between characters
-    const charSpacingZ = 10; // Vertical spacing between characters
+    const charSize = 2; // Size of each character
+    const charSpacingX = 6; // Horizontal spacing between characters
+    const charSpacingZ = 6; // Vertical spacing between characters
 
     // Calculate how many characters can fit in the viewport
     const numCharsX = Math.floor(window.innerWidth / charSpacingX);
@@ -369,8 +386,28 @@ function createTextMesh(character, position, size) {
     // Position the group
     textGroup.position.set(position.x, position.y, position.z);
 
+    textEntities.push(textGroup);
     return textGroup;
 }
+
+function panTextEntities(delta) {
+    textEntities = textEntities.filter(textEntity => {
+        textEntity.position.x -= delta;
+
+        // Check bounds and reset position if necessary
+        if (textEntity.position.x < -100) {
+            textEntity.position.x += 200;
+            return true;
+        } else if (textEntity.position.x > 100) {
+            // Remove textEntity from the scene and array
+            scene.remove(textEntity);
+            return false;
+        }
+
+        return true;
+    });
+}
+
 
 function initializeCharGeometries() {
     const word = 'xjermsx';
