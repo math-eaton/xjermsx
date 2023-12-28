@@ -1,4 +1,4 @@
-import "/src/css/style.css";
+import "../css/style.css";
 // import { afterDark } from "./afterDark.js";
 import { afterDark3D } from "./afterDark3D.js";
 
