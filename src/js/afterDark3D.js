@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { Delaunay } from 'd3-delaunay';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export function afterDark3D(containerId) {
-  let scene, camera, renderer;
+  let scene, camera, renderer, controls;
   let buildings = [];
   let stars = [];
-  let panSpeed = 0.1;
+  let panSpeed = 0.05;
   let depth = 10; 
   let myAppFont; // Global variable to store the font
   let charGeometries = {};
@@ -109,7 +111,7 @@ export function afterDark3D(containerId) {
 
     createFacePoints(width, height, depth, face) {
         const points = [];
-        const pointsPerUnit = 1; // Adjust this for more or fewer points
+        const pointsPerUnit = 1.35; // Adjust this for more or fewer points
     
         let gridX, gridY;
     
@@ -200,18 +202,32 @@ function setupThreeJS() {
       window.innerHeight / 2, window.innerHeight / -2,
       1, 1000
     );
+
     camera.position.set(200, 200, 200);
     camera.lookAt(scene.position);
-    zoomOrthographicCamera(0.15); // Example: zoom in by a factor of 0.5
-    renderer = new THREE.WebGLRenderer();
+    camera.zoom = 7;
+    camera.minZoom = 5.0;
+    camera.maxZoom = 10.0;
+    camera.updateProjectionMatrix();
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio); // Adjust for device pixel ratio
     document.getElementById(containerId).appendChild(renderer.domElement);
+
+    const controls = new MapControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.screenSpacePanning = true;
+
+
+
     const fontLoader = new FontLoader();
     fontLoader.load('font/optimer_regular.typeface.json', function (font) {
         myAppFont = font;
-        initializeCharGeometries(); // Pre-create geometries and materials
-        addBuildings(); // Create buildings now that the font is loaded
-        addTextSprites(); // Create text sprites now that the font is loaded
+        initializeCharGeometries();
+        addBuildings();
+        addTextSprites();
         animate();
     });
 }
@@ -226,13 +242,13 @@ function addBuildings() {
     let xEnd = viewportWidth / 4;     // Example: end at a quarter width to the right
     let zStart = -viewportHeight / 2; // Example: start a bit towards the top
     let zDepth = 10;                   // Depth of each row
-    let zRows = Math.ceil(viewportHeight / 2); // Number of rows based on viewport height
+    let zRows = Math.ceil(viewportHeight / 5); // Number of rows based on viewport height
 
     // Adjust building parameters
     let minWidth = 5;
     let maxWidth = 25;
-    let minDepth = 10;
-    let maxDepth = 25;
+    let minDepth = 5;
+    let maxDepth = zDepth * 2;
     let minGap = maxWidth;
     let maxGap = viewportWidth / 4;
 
@@ -299,6 +315,11 @@ function createMeshFromPoints(points) {
 
   function animate() {
     requestAnimationFrame(animate);
+    
+    // Update the controls
+    if (controls) {
+        controls.update();
+    }
 
     // Update buildings
     buildings.forEach(building => building.pan(panSpeed));
@@ -316,7 +337,7 @@ function createMeshFromPoints(points) {
 
     // Clear existing text and buildings
     clearBuildings();
-    clearText(); // Implement this function to remove existing text meshes
+    clearTextEntities(); // Implement this function to remove existing text meshes
 
     // Recalculate and add buildings and text based on new window size
     addBuildings();
@@ -336,8 +357,8 @@ function clearTextEntities() {
 
 function addTextSprites() {
     const word = 'xjermsx'; // Word to be displayed
-    const charSize = 2; // Size of each character
-    const charSpacingX = 6; // Horizontal spacing between characters
+    const charSize = 4; // Size of each character
+    const charSpacingX = 24; // Horizontal spacing between characters
     const charSpacingZ = 6; // Vertical spacing between characters
 
     // Calculate how many characters can fit in the viewport
@@ -376,7 +397,7 @@ function createTextMesh(character, position, size) {
     const strokeMesh = new THREE.Mesh(charGeometries[character], strokeMaterials[character]);
     strokeMesh.position.set(0, -0.1, 0); // Slightly lower to avoid z-fighting
     strokeMesh.rotation.x = -Math.PI / 2;
-    strokeMesh.scale.multiplyScalar(1.05); // Scale up for stroke effect
+    strokeMesh.scale.multiplyScalar(1.04); // Scale up for stroke effect
 
     // Group the fill and stroke meshes
     const textGroup = new THREE.Group();
