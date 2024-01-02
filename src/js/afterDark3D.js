@@ -4,6 +4,8 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { Delaunay } from 'd3-delaunay';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
+
 
 export function afterDark3D(containerId) {
   let scene, camera, renderer, controls;
@@ -197,6 +199,11 @@ export function afterDark3D(containerId) {
 
 function setupThreeJS() {
     scene = new THREE.Scene();
+    
+    // Add ambient light to the scene
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // Soft white light
+    scene.add(ambientLight);
+    
     camera = new THREE.OrthographicCamera(
       window.innerWidth / -2, window.innerWidth / 2,
       window.innerHeight / 2, window.innerHeight / -2,
