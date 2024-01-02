@@ -1,11 +1,12 @@
 // import "../css/style.css";
 // import { afterDark } from "./afterDark.js";
-import { afterDark3D } from "./afterDark3D.js";
-// import { asciiShader } from "./ascii_shader.js";
+// import { afterDark3D } from "./afterDark3D.js";
+import { asciiShader } from "./ascii_shader.js";
 
 window.onload = () => {
   // afterDark("skylineContainer1");
-  afterDark3D("skyline3DContainer1");
+  // afterDark3D("skyline3DContainer1");
+  asciiShader("asciiContainer1")
 };
 
 // cursor trails
