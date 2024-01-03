@@ -56,10 +56,10 @@ export function asciiShader(containerId) {
     // AsciiEffect
     // Custom CharSet and Options
     // const customCharSet = 'x♡♥☦*⭒♥'
-    const customCharSet = '░♡❣♥®x6▓%&*@#❤█  '
+    const customCharSet = '░♡❣♥®x6☹%&*⛆@#❤☺☻  '
     const asciiOptions = {
         invert: true,
-        resolution: 0.1, // Adjust for more or less detail
+        resolution: 0.175, // Adjust for more or less detail
         scale: 1.0,       // Adjust based on your display requirements
         color: false,     // Set to true if you want colored ASCII characters
         block: false,
@@ -222,19 +222,23 @@ function createHeart() {
 }
 
 function createSphere() {
-  const geometry = new THREE.SphereGeometry(1, 5, 5);
-  const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+  const geometry = new THREE.SphereGeometry(1.5, 3, 7);
+  const material = new THREE.MeshPhongMaterial({ 
+    color: 0xff0000,
+    wireframe: true,
+    alphaHash: true,
+   });
   const sphere = new THREE.Mesh(geometry, material);
   const sphereCentroid = new THREE.Vector3(0, 0, 0); // Sphere's centroid is at its origin
   return { shape: sphere, centroid: sphereCentroid };
 }
 
 function createTorus() {
-  let radius = 1.5; // Reduced radius
-  let tube = 0.2;   // Reduced tube size
+  let radius = 0.85; // Reduced radius
+  let tube = 0.12;   // Reduced tube size
   let tubularSegments = 100;
-  let radialSegments = 16;
-  let p = 6;
+  let radialSegments = 160;
+  let p = 4;
   let q = 2;
 
   const geometry = new THREE.TorusKnotGeometry(
@@ -246,7 +250,10 @@ function createTorus() {
     q
   );
 
-  const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+  const material = new THREE.MeshPhongMaterial({ 
+    color: 0xff0000,
+    wireframe: true,
+   });
   const torus = new THREE.Mesh(geometry, material);
   const torusCentroid = new THREE.Vector3(0, 0, 0); // Torus's centroid is at its origin
   return { shape: torus, centroid: torusCentroid };
