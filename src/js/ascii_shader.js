@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
+import { createNoise3D } from 'simplex-noise';
+const noise3D = createNoise3D();
+
 
 export function asciiShader(containerId) {
   let scene, camera, renderer, movingLight, effect, sphere, heart, currentShape;
@@ -10,6 +14,7 @@ export function asciiShader(containerId) {
   let maxScale = 1.9;
   let minScale = 1.55;
   let heartCentroid = new THREE.Vector3(0, 1.25, 5); // Define heartCentroid here
+  let simplexNoise;
   
 
   function init() {
@@ -109,9 +114,40 @@ export function asciiShader(containerId) {
     switchShape(createHeart()); // Initialize with the heart shape
   }
 
-  function animate() {
-    animationFrameId = requestAnimationFrame(animate);
+  let swarmData = createSwarm();
+  
+// Add or subtract a point every 2 seconds
+let lastUpdateTime = Date.now();
 
+function animate() {
+    requestAnimationFrame(animate);
+    
+    let currentTime = Date.now();
+    if (currentTime - lastUpdateTime > 2000) { // Every 2 seconds
+        lastUpdateTime = currentTime;
+        if (Math.random() < 0.5 && swarmData.points.length > 5) {
+            // Remove a point
+            swarmData.points.pop();
+        } else {
+            // Add a point
+            const randomPoint = swarmData.points[Math.floor(Math.random() * swarmData.points.length)];
+            swarmData.points.push(new THREE.Vector3().copy(randomPoint));
+        }
+        swarmData.shape.geometry.dispose(); // Dispose old geometry
+        swarmData.shape.geometry = new ConvexGeometry(swarmData.points);
+    }
+
+    // Update points positions using noise
+    let time = Date.now() * 0.0001;
+    swarmData.points.forEach((point, i) => {
+        point.x += noise3D(i, time, 0) * 0.1;
+        point.y += noise3D(time, i, 1) * 0.1;
+        point.z += noise3D(i, time, 2) * 0.1;
+    });
+
+    // Update Convex Hull Geometry
+    swarmData.shape.geometry.dispose(); // Dispose old geometry
+    swarmData.shape.geometry = new ConvexGeometry(swarmData.points);
 
     // Ensure movingLight and its position are defined before accessing
     if (movingLight && movingLight.position) {
@@ -137,9 +173,9 @@ export function asciiShader(containerId) {
         currentShape.scale.z += scaleSpeed * scaleDirection;
 
         // Continuous rotation
-        currentShape.rotation.x += 0.005; // Rotates the shape around the x-axis
-        currentShape.rotation.y += 0.005; // Rotates the shape around the y-axis
-        currentShape.rotation.z += 0.005; // Rotates the shape around the z-axis
+        currentShape.rotation.x += 0.008; // Rotates the shape around the x-axis
+        currentShape.rotation.y += 0.009; // Rotates the shape around the y-axis
+        currentShape.rotation.z += 0.007; // Rotates the shape around the z-axis
         
     }
 
@@ -172,16 +208,26 @@ export function asciiShader(containerId) {
   }
 
   function switchShape({ shape, centroid }) {
-    if (currentShape) {
-        scene.remove(currentShape);
-        if (currentShape.geometry) currentShape.geometry.dispose();
-        if (currentShape.material) currentShape.material.dispose();
+    if (!shape || !centroid) {
+        console.error("Invalid shape or centroid provided to switchShape");
+        return;
     }
-    currentShape = shape;
-    scene.add(currentShape); // Add only the shape
+    if (shape && centroid) {
+        if (currentShape) {
+            scene.remove(currentShape);
+            if (currentShape.geometry) currentShape.geometry.dispose();
+            if (currentShape.material) currentShape.material.dispose();
+        }
+        currentShape = shape;
+        scene.add(currentShape); // Add only the shape
 
-    // Update the position of the moving light to the centroid of the current shape
-    movingLight.position.set(centroid.x, centroid.y, centroid.z);
+        // Update the position of the moving light to the centroid of the current shape
+        if (movingLight) {
+            movingLight.position.set(centroid.x, centroid.y, centroid.z);
+        }
+    } else {
+        console.error("Invalid shape or centroid provided to switchShape");
+    }
 }
 
 function createHeart() {
@@ -259,18 +305,41 @@ function createTorus() {
   return { shape: torus, centroid: torusCentroid };
 }
 
-function changeAsciiEffectColors(newTextColor, newBackgroundColor) {
-  if (effect && effect.domElement) {
-      effect.domElement.style.color = newTextColor;
-      effect.domElement.style.backgroundColor = newBackgroundColor;
+function createSwarm() {
+  const points = [];
+  for (let i = 0; i < 20; i++) {
+      points.push(new THREE.Vector3(
+          Math.random() * 2 - 1,
+          Math.random() * 2 - 1,
+          Math.random() * 2 - 1
+      ));
   }
+
+  const geometry = new ConvexGeometry(points);
+  const material = new THREE.MeshStandardMaterial({ 
+      color: 0xff0000,
+      wireframe: true,
+  });
+
+  const swarm = new THREE.Mesh(geometry, material);
+  const swarmCentroid = new THREE.Vector3(0, 0, 0); // Initial centroid
+
+  return { shape: swarm, centroid: swarmCentroid, points };
 }
 
-// Example usage
-changeAsciiEffectColors('red', 'blue'); // Change to red text on a blue background
 
 
-// Event listener or other mechanism to switch shapes
+// function changeAsciiEffectColors(newTextColor, newBackgroundColor) {
+//   if (effect && effect.domElement) {
+//       effect.domElement.style.color = newTextColor;
+//       effect.domElement.style.backgroundColor = newBackgroundColor;
+//   }
+// }
+
+// changeAsciiEffectColors('red', 'blue'); // Change to red text on a blue background
+
+
+// Event listener for shape switching
 window.addEventListener('keydown', (event) => {
   if (event.key === '1') {
       switchShape(createHeart());
@@ -278,10 +347,10 @@ window.addEventListener('keydown', (event) => {
       switchShape(createSphere());
   } else if (event.key === '3') {
       switchShape(createTorus());
-  } else if (event.key === '3') {
-    switchShape(createComplex());
+  } else if (event.key === '4') { 
+      const swarm = createSwarm(); 
+      switchShape(swarm);
   }
-  
 });
 
     // Initialize and start the animation
