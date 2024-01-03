@@ -117,5 +117,5 @@ button:focus-visible {
 #asciiContainer1 {
   width: 100vw; 
   height: 100vh;
-  /* filter: grayscale(0.9) contrast(15); */
+  filter: grayscale(0.9) invert();
 }

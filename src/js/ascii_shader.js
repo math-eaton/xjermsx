@@ -15,22 +15,35 @@ export function asciiShader(containerId) {
   function init() {
     // Scene
     scene = new THREE.Scene();
-
-    let lightColor = new THREE.Color("rgba(255, 0, 0, 0.9")
+    scene.background = new THREE.Color( 255, 255, 0 );
 
     // Create a moving light source at the heart's centroid
-    movingLight = new THREE.PointLight(lightColor, 5, 10);
-    movingLight.position.copy(heartCentroid);
+    movingLight = new THREE.PointLight(0xf00fff, 3, 100); // Higher intensity
+    movingLight.position.set(heartCentroid.x, heartCentroid.y + 500, heartCentroid.z + 500);
+    movingLight.color.set(0xff0000); // Red color
     scene.add(movingLight);
 
-    // Static light at the heart's centroid
-    const light = new THREE.PointLight(lightColor, 50, 25);
-    light.position.copy(heartCentroid);
+    // Add a static light with high intensity and distance
+    const light = new THREE.PointLight(0xffffff, 3, 500);
+    light.position.set(heartCentroid.x - 500, heartCentroid.y - 500, heartCentroid.z - 500);
+    light.color.set(0x0000ff); // Blue color
     scene.add(light);
-  
-    // Add a static ambient light for overall scene illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff); // Soft white light
-    scene.add(ambientLight);    
+
+    //  ambient light for softer overall scene illumination
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    scene.add(ambientLight);
+
+    // Directional light
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(5, 5, 5);
+    scene.add(dirLight);
+
+    // Spot light
+    // const spotLight = new THREE.SpotLight(0xffffff, 0.5);
+    // spotLight.position.set(5, 5, 5);
+    // spotLight.angle = Math.PI / 4;
+    // spotLight.penumbra = 0.1;
+    // scene.add(spotLight);
     
     // Camera
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -43,7 +56,7 @@ export function asciiShader(containerId) {
     // AsciiEffect
     // Custom CharSet and Options
     // const customCharSet = 'x♡♥☦*⭒♥'
-    const customCharSet = '♡❣♥❤ '
+    const customCharSet = '░♡❣♥®x6▓%&*@#❤█  '
     const asciiOptions = {
         invert: true,
         resolution: 0.1, // Adjust for more or less detail
@@ -55,6 +68,12 @@ export function asciiShader(containerId) {
     // AsciiEffect with custom parameters
     effect = new AsciiEffect(renderer, customCharSet, asciiOptions);
     effect.setSize(window.innerWidth, window.innerHeight);
+
+    // Adjust text color and background color
+    effect.domElement.style.color = 'cyan'; // Change text color here
+    effect.domElement.style.backgroundColor = 'black'; // Change background color here
+
+
     effect.domElement.style.color = 'white'; // Adjust text color as needed
     effect.domElement.style.backgroundColor = 'white'; // Adjust background color as needed
 
@@ -93,12 +112,22 @@ export function asciiShader(containerId) {
   function animate() {
     animationFrameId = requestAnimationFrame(animate);
 
+
+    // Ensure movingLight and its position are defined before accessing
+    if (movingLight && movingLight.position) {
+        // Animate the Z position of the moving light to create a bouncing effect
+        const time = Date.now() * 0.00025; // Control the speed of the bounce
+        movingLight.position.z = movingLight.position.z + Math.sin(time) * 0.01; // Adjust the multiplier to control the bounce amplitude
+
+        // Create a swinging effect for the moving light
+        movingLight.position.x = Math.sin(time) * 500;
+        movingLight.position.y = 250 + Math.sin(time * 1.5) * 250;
+        movingLight.position.z = 250 + Math.cos(time * 1.5) * 250;
+    
+    }
+
     // Only animate the current shape if it exists
     if (currentShape) {
-        // Animate the Z position of the moving light to create a bouncing effect
-        const time = Date.now() * 0.0025; // Control the speed of the bounce
-        movingLight.position.z = heartCentroid.z + Math.sin(time) * 1; // Adjust the multiplier to control the bounce amplitude
-
         // Scale the current shape
         if ((currentShape.scale.x >= maxScale && scaleDirection > 0) || (currentShape.scale.x <= minScale && scaleDirection < 0)) {
             scaleDirection *= -1; // Reverse the scaling direction
@@ -106,6 +135,12 @@ export function asciiShader(containerId) {
         currentShape.scale.x += scaleSpeed * scaleDirection;
         currentShape.scale.y += scaleSpeed * scaleDirection;
         currentShape.scale.z += scaleSpeed * scaleDirection;
+
+        // Continuous rotation
+        currentShape.rotation.x += 0.01; // Rotates the shape around the x-axis
+        currentShape.rotation.y += 0.01; // Rotates the shape around the y-axis
+        currentShape.rotation.z += 0.01; // Rotates the shape around the z-axis
+        
     }
 
     // Render scene with AsciiEffect
@@ -136,14 +171,17 @@ export function asciiShader(containerId) {
     }
   }
 
-  function switchShape(shape) {
+  function switchShape({ shape, centroid }) {
     if (currentShape) {
         scene.remove(currentShape);
         if (currentShape.geometry) currentShape.geometry.dispose();
         if (currentShape.material) currentShape.material.dispose();
     }
     currentShape = shape;
-    scene.add(currentShape);
+    scene.add(currentShape); // Add only the shape
+
+    // Update the position of the moving light to the centroid of the current shape
+    movingLight.position.set(centroid.x, centroid.y, centroid.z);
 }
 
 function createHeart() {
@@ -171,30 +209,32 @@ function createHeart() {
   geometry.center();
 
   const material = new THREE.MeshPhongMaterial({
-      color: 0xff00ff,
-      specular: 0xffffff,
+      color: 0xffffff,
+      specular: 0xff00ff,
       shininess: 10,
       side: THREE.FrontSide,
   });
 
   const heart = new THREE.Mesh(geometry, material);
+  const heartCentroid = new THREE.Vector3(0, 1.25, 0); // Define the heart's centroid
   heart.rotation.x = Math.PI;
-  return heart;
+  return { shape: heart, centroid: heartCentroid };
 }
 
 function createSphere() {
-  const geometry = new THREE.SphereGeometry(1, 32, 32);
+  const geometry = new THREE.SphereGeometry(1, 5, 5);
   const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
   const sphere = new THREE.Mesh(geometry, material);
-  return sphere;
+  const sphereCentroid = new THREE.Vector3(0, 0, 0); // Sphere's centroid is at its origin
+  return { shape: sphere, centroid: sphereCentroid };
 }
 
 function createTorus() {
   let radius = 1.5; // Reduced radius
-  let tube = 0.4;   // Reduced tube size
+  let tube = 0.2;   // Reduced tube size
   let tubularSegments = 100;
   let radialSegments = 16;
-  let p = 2;
+  let p = 6;
   let q = 2;
 
   const geometry = new THREE.TorusKnotGeometry(
@@ -208,8 +248,19 @@ function createTorus() {
 
   const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
   const torus = new THREE.Mesh(geometry, material);
-  return torus;
+  const torusCentroid = new THREE.Vector3(0, 0, 0); // Torus's centroid is at its origin
+  return { shape: torus, centroid: torusCentroid };
 }
+
+function changeAsciiEffectColors(newTextColor, newBackgroundColor) {
+  if (effect && effect.domElement) {
+      effect.domElement.style.color = newTextColor;
+      effect.domElement.style.backgroundColor = newBackgroundColor;
+  }
+}
+
+// Example usage
+changeAsciiEffectColors('red', 'blue'); // Change to red text on a blue background
 
 
 // Event listener or other mechanism to switch shapes
@@ -218,8 +269,8 @@ window.addEventListener('keydown', (event) => {
       switchShape(createHeart());
   } else if (event.key === '2') {
       switchShape(createSphere());
-  } else if (event.key === '3'){
-    switchShape(createTorus());
+  } else if (event.key === '3') {
+      switchShape(createTorus());
   }
 });
 
