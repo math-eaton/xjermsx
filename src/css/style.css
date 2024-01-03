@@ -119,3 +119,29 @@ button:focus-visible {
   height: 100vh;
   filter: grayscale(0.9) invert();
 }
+
+.module-selector {
+  position: fixed;
+  bottom: 2vh;
+  right: 2vw;
+  z-index: 1000;
+}
+
+.shape-selector {
+  position: fixed;
+  bottom: 2vh;
+  left: 2vw;
+  z-index: 1000;
+  display:none;
+}
+
+.module-selector button {
+  margin: 5px;
+  padding: 10px;
+}
+
+.shape-selector button {
+  margin: 5px;
+  padding: 10px;
+}
+

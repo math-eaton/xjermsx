@@ -137,9 +137,9 @@ export function asciiShader(containerId) {
         currentShape.scale.z += scaleSpeed * scaleDirection;
 
         // Continuous rotation
-        currentShape.rotation.x += 0.01; // Rotates the shape around the x-axis
-        currentShape.rotation.y += 0.01; // Rotates the shape around the y-axis
-        currentShape.rotation.z += 0.01; // Rotates the shape around the z-axis
+        currentShape.rotation.x += 0.005; // Rotates the shape around the x-axis
+        currentShape.rotation.y += 0.005; // Rotates the shape around the y-axis
+        currentShape.rotation.z += 0.005; // Rotates the shape around the z-axis
         
     }
 
@@ -222,8 +222,8 @@ function createHeart() {
 }
 
 function createSphere() {
-  const geometry = new THREE.SphereGeometry(1.5, 3, 7);
-  const material = new THREE.MeshPhongMaterial({ 
+  const geometry = new THREE.SphereGeometry(1.25, 20, 20);
+  const material = new THREE.MeshStandardMaterial({ 
     color: 0xff0000,
     wireframe: true,
     alphaHash: true,
@@ -278,16 +278,23 @@ window.addEventListener('keydown', (event) => {
       switchShape(createSphere());
   } else if (event.key === '3') {
       switchShape(createTorus());
+  } else if (event.key === '3') {
+    switchShape(createComplex());
   }
+  
 });
 
-  // Initialize and start the animation
-  init();
-  animate();
+    // Initialize and start the animation
+    init();
+    animate();
 
-  // Expose the dispose function to allow clean up from outside
-  return { dispose };
+    // Return an object with all functions you want to expose
+    return {
+        dispose,
+        switchShape
+    };
 }
+
 
 // Usage example:
 // const asciiSphere = createAsciiSphere('containerId');

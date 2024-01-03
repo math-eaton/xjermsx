@@ -228,7 +228,6 @@ function setupThreeJS() {
     controls.screenSpacePanning = true;
 
 
-
     const fontLoader = new FontLoader();
     fontLoader.load('font/optimer_regular.typeface.json', function (font) {
         myAppFont = font;
@@ -323,9 +322,12 @@ function createMeshFromPoints(points) {
   function animate() {
     requestAnimationFrame(animate);
     
-    // Update the controls
+    // Update controls
     if (controls) {
         controls.update();
+
+        // Clamp camera position within defined boundaries
+        clampCameraPosition();
     }
 
     // Update buildings
@@ -468,6 +470,19 @@ function clearBuildings() {
     });
     buildings = []; // Clear the buildings array
 }
+
+function clampCameraPosition() {
+    // Define your boundaries (example values, adjust as needed)
+    const minX = -50, maxX = 50;
+    const minY = 10, maxY = 100;
+    const minZ = -50, maxZ = 50;
+
+    // Clamp camera position
+    camera.position.x = Math.max(minX, Math.min(maxX, camera.position.x));
+    camera.position.y = Math.max(minY, Math.min(maxY, camera.position.y));
+    camera.position.z = Math.max(minZ, Math.min(maxZ, camera.position.z));
+}
+
 
   setupThreeJS();
   addBuildings();

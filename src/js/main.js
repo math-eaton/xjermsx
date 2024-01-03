@@ -1,13 +1,93 @@
 // import "../css/style.css";
-// import { afterDark } from "./afterDark.js";
-// import { afterDark3D } from "./afterDark3D.js";
+import { afterDark } from "./afterDark.js";
+import { afterDark3D } from "./afterDark3D.js";
 import { asciiShader } from "./ascii_shader.js";
 
+
+const asciiModule = asciiShader("asciiContainer1");
+
+
+function switchModule(moduleName) {
+  // Hide all containers
+  document.getElementById('skylineContainer1').style.display = 'none';
+  document.getElementById('skyline3DContainer1').style.display = 'none';
+  document.getElementById('asciiContainer1').style.display = 'none';
+
+  // Clear containers to ensure canvases are removed
+  document.getElementById('skylineContainer1').innerHTML = '';
+  document.getElementById('skyline3DContainer1').innerHTML = '';
+  document.getElementById('asciiContainer1').innerHTML = '';
+
+  // Activate the selected module and show its container
+  switch (moduleName) {
+    case 'afterDark':
+      afterDark("skylineContainer1");
+      document.getElementById('skylineContainer1').style.display = 'block';
+      break;
+    case 'afterDark3D':
+      afterDark3D("skyline3DContainer1");
+      document.getElementById('skyline3DContainer1').style.display = 'block';
+      break;
+    case 'asciiShader':
+      asciiShader("asciiContainer1");
+      document.getElementById('asciiContainer1').style.display = 'block';
+      break;
+    default:
+      console.error("Unknown module:", moduleName);
+  }
+
+    // Show shape buttons if asciiShader is selected, hide otherwise
+    const shapeButtons = document.getElementById('shapeButtons');
+    if (moduleName === 'asciiShader') {
+      shapeButtons.style.display = 'block';
+      console.log("Shape buttons should now be visible.");
+    } else {
+      shapeButtons.style.display = 'none';
+      console.log("Shape buttons should now be hidden.");
+    }
+}
+
 window.onload = () => {
-  // afterDark("skylineContainer1");
-  // afterDark3D("skyline3DContainer1");
-  asciiShader("asciiContainer1")
+  // Initialize the first module or keep all modules inactive initially
+  switchModule('asciiShader');
 };
+
+document.getElementById('btnAfterDark').addEventListener('click', () => switchModule('afterDark'));
+document.getElementById('btnAfterDark3D').addEventListener('click', () => switchModule('afterDark3D'));
+document.getElementById('btnAsciiShader').addEventListener('click', () => switchModule('asciiShader'));
+document.getElementById('btnHeart').addEventListener('click', () => asciiModule.switchShape(createHeart()));
+document.getElementById('btnSphere').addEventListener('click', () => asciiModule.switchShape(createSphere()));
+document.getElementById('btnTorus').addEventListener('click', () => asciiModule.switchShape(createTorus()));
+
+
+// window resizing
+
+window.addEventListener('resize', handleResize);
+
+function handleResize() {
+  // Update container sizes
+  const containers = [document.getElementById('skylineContainer1'), 
+                      document.getElementById('skyline3DContainer1'), 
+                      document.getElementById('asciiContainer1')];
+  
+  containers.forEach(container => {
+    if (container.style.display !== 'none') {
+      // Set the container size based on its parent or some other logic
+      container.style.width = '100%'; // Example: Set width to 100% of the parent
+      container.style.height = 'auto'; // Example: Set height automatically
+
+      // Call resize functions for active visualizations
+      if (container.id === 'skylineContainer1' && afterDark.resize) {
+        afterDark.resize();
+      } else if (container.id === 'skyline3DContainer1' && afterDark3D.resize) {
+        afterDark3D.resize();
+      } else if (container.id === 'asciiContainer1' && asciiShader.resize) {
+        asciiShader.resize();
+      }
+    }
+  });
+}
+
 
 // cursor trails
 document.addEventListener("mousemove", function (e) {
