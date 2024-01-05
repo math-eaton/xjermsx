@@ -303,7 +303,7 @@ function createMeshFromPoints(points) {
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     const material = new THREE.MeshBasicMaterial({ 
-        color: 0x00FF00, 
+        color: 0xFFFFFF, 
         wireframe: true,
      });
     return new THREE.Mesh(geometry, material);
@@ -456,7 +456,7 @@ function initializeCharGeometries() {
             });
 
             charMaterials[char] = new THREE.MeshBasicMaterial({ color: 0x000000 }); // Fill color
-            strokeMaterials[char] = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Stroke color
+            strokeMaterials[char] = new THREE.MeshBasicMaterial({ color: 0xFFFFFF }); // Stroke color
         }
     });
 }

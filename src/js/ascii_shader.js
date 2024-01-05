@@ -240,13 +240,39 @@ function animate() {
 
 function switchToObjModel(obj) {
   if (currentShape) {
-      scene.remove(currentShape);
-      if (currentShape.geometry) currentShape.geometry.dispose();
-      if (currentShape.material) currentShape.material.dispose();
+    scene.remove(currentShape);
+    if (currentShape.geometry) currentShape.geometry.dispose();
+    if (currentShape.material) currentShape.material.dispose();
   }
+
   currentShape = obj;
-  currentShape.scale.copy(objDefaultScale);
   scene.add(currentShape);
+
+  // Compute the bounding box of the OBJ model
+  const boundingBox = new THREE.Box3().setFromObject(obj);
+
+  // Calculate the maximum dimension of the bounding box
+  const maxSize = Math.max(...boundingBox.getSize(new THREE.Vector3()).toArray());
+
+  // Calculate the distance from the camera to the center of the bounding box
+  const center = boundingBox.getCenter(new THREE.Vector3());
+  const distance = camera.position.distanceTo(center);
+
+  // Calculate the vertical field of view in radians
+  const vFOV = THREE.MathUtils.degToRad(camera.fov);
+
+  // Calculate the scale factor based on the maximum dimension and the camera's view frustum
+  const scaleHeight = 2 * Math.tan(vFOV / 2) * distance; // Visible height
+  const scaleFactor = scaleHeight / maxSize;
+
+  // Apply the scale factor to the model
+  currentShape.scale.setScalar(scaleFactor * 0.5); // Added a scaling factor of 0.5 for additional control
+
+  // Center the model in the scene
+  currentShape.position.sub(center);
+
+  // Optionally: adjust the camera to frame the object nicely
+  camera.lookAt(currentShape.position);
 }
 
 function createHeart() {
@@ -370,6 +396,9 @@ function handleModelError(error) {
 const objFiles = [
   '3D/horse2.obj',
   '3D/hammer.obj',
+  '3D/altostratus00.obj',
+  '3D/altostratus01.obj',
+
 
 ];
 

@@ -160,6 +160,7 @@ function exportContainerToPDF(containerId, filename) {
       const pageHeight = doc.internal.pageSize.getHeight();
       const imageWidth = canvas.width;
       const imageHeight = canvas.height;
+      console.log(imageWidth, imageHeight)
       const ratio = Math.min(pageWidth / imageWidth, pageHeight / imageHeight);
 
       const scaledWidth = imageWidth * ratio;
