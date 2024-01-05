@@ -3,6 +3,11 @@ import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { createNoise3D } from 'simplex-noise';
+import { SVGRenderer } from 'three/examples/jsm/renderers/SVGRenderer.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+
 const noise3D = createNoise3D();
 
 
@@ -13,8 +18,10 @@ export function asciiShader(containerId) {
   let scaleSpeed = 0;
   let maxScale = 1.9;
   let minScale = 1.55;
-  let heartCentroid = new THREE.Vector3(0, 1.25, 5); // Define heartCentroid here
-  let simplexNoise;
+  let heartCentroid = new THREE.Vector3(0, 1.25, 5);
+  // let simplexNoise;
+  const objDefaultScale = new THREE.Vector3(10, 10, 10); 
+  let isRotationEnabled = true;
   
 
   function init() {
@@ -84,6 +91,16 @@ export function asciiShader(containerId) {
 
     // Add AsciiEffect DOM element to the container
     document.getElementById(containerId).appendChild(effect.domElement);
+
+    // event listener for output DL
+    // document.getElementById('downloadSVG').addEventListener('click', btnSVGExportClick);
+    // document.getElementById('downloadPDF').addEventListener('click', btnPDFExportClick);
+    const downloadButton = document.getElementById('downloadPDF');
+    downloadButton.removeEventListener('click', btnPDFExportClick);
+    downloadButton.addEventListener('click', btnPDFExportClick);
+
+
+
 
     // Heart Shape
     const x = 0, y = 0;
@@ -173,10 +190,12 @@ function animate() {
         currentShape.scale.z += scaleSpeed * scaleDirection;
 
         // Continuous rotation
-        currentShape.rotation.x += 0.008; // Rotates the shape around the x-axis
-        currentShape.rotation.y += 0.009; // Rotates the shape around the y-axis
-        currentShape.rotation.z += 0.007; // Rotates the shape around the z-axis
-        
+        if (isRotationEnabled) {
+          currentShape.rotation.x += 0.008; // Rotates the shape around the x-axis
+          currentShape.rotation.y += 0.009; // Rotates the shape around the y-axis
+          currentShape.rotation.z += 0.007; // Rotates the shape around the z-axis
+      }
+      
     }
 
     // Render scene with AsciiEffect
@@ -230,6 +249,17 @@ function animate() {
     }
 }
 
+function switchToObjModel(obj) {
+  if (currentShape) {
+      scene.remove(currentShape);
+      if (currentShape.geometry) currentShape.geometry.dispose();
+      if (currentShape.material) currentShape.material.dispose();
+  }
+  currentShape = obj;
+  currentShape.scale.copy(objDefaultScale);
+  scene.add(currentShape);
+}
+
 function createHeart() {
   // Heart Shape
   const x = 0, y = 0;
@@ -268,7 +298,7 @@ function createHeart() {
 }
 
 function createSphere() {
-  const geometry = new THREE.SphereGeometry(1.25, 20, 20);
+  const geometry = new THREE.SphereGeometry(5.25, 20, 20);
   const material = new THREE.MeshStandardMaterial({ 
     color: 0xff0000,
     wireframe: true,
@@ -319,6 +349,7 @@ function createSwarm() {
   const material = new THREE.MeshStandardMaterial({ 
       color: 0xff0000,
       wireframe: true,
+      
   });
 
   const swarm = new THREE.Mesh(geometry, material);
@@ -327,21 +358,126 @@ function createSwarm() {
   return { shape: swarm, centroid: swarmCentroid, points };
 }
 
+function loadObjModel(url, onLoad, onError) {
+  const loader = new OBJLoader();
+  loader.load(url, obj => {
+      obj.traverse(function (child) {
+          if (child.isMesh) {
+              child.material = new THREE.MeshStandardMaterial({
+                  color: 0xff0000,
+                  wireframe: true
+              });
+          }
+      });
+      onLoad(obj);
+  }, undefined, onError);
+}
+
+function handleModelError(error) {
+  console.error('Error loading OBJ model:', error);
+}
 
 
-// function changeAsciiEffectColors(newTextColor, newBackgroundColor) {
-//   if (effect && effect.domElement) {
-//       effect.domElement.style.color = newTextColor;
-//       effect.domElement.style.backgroundColor = newBackgroundColor;
-//   }
-// }
+const objFiles = [
+  '3D/horse2.obj',
+  '3D/hammer.obj',
 
-// changeAsciiEffectColors('red', 'blue'); // Change to red text on a blue background
+];
 
+// render canvas to svg
+function btnSVGExportClick() {
+  var rendererSVG = new SVGRenderer();
+  
+  rendererSVG.setSize(window.innerWidth, window.innerHeight);
+  rendererSVG.render(scene, camera);
+  ExportToSVG(rendererSVG, "test.svg");
+
+}
+
+let isProcessing = false;
+
+function btnPDFExportClick() {
+    if (isProcessing) return;
+    isProcessing = true;
+
+    var asciiOutputElement = document.getElementById('asciiContainer1');
+    var asciiText = asciiOutputElement.innerText;
+    console.log("downloading");
+
+    exportAsciiEffectToPDF("capture.pdf").finally(() => {
+        isProcessing = false;
+    });
+}
+
+function exportAsciiEffectToPDF(filename) {
+  const asciiContainer = document.getElementById('asciiContainer1');
+
+  html2canvas(asciiContainer).then(canvas => {
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+      const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
+      });
+
+      // Calculate the ratio to fit the image to the page
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const imageWidth = canvas.width;
+      const imageHeight = canvas.height;
+      const ratio = Math.min(pageWidth / imageWidth, pageHeight / imageHeight);
+
+      const scaledWidth = imageWidth * ratio;
+      const scaledHeight = imageHeight * ratio;
+
+      // Center the image on the page
+      const x = (pageWidth - scaledWidth) / 2;
+      const y = (pageHeight - scaledHeight) / 2;
+
+      // Add image to PDF
+      doc.addImage(imgData, 'JPEG', x, y, scaledWidth, scaledHeight);
+      doc.save(filename);
+  });
+}
+
+
+
+function btnSVGExportClick() {
+  // Assuming the ASCII effect outputs to an element with an ID 'asciiOutput'
+  var asciiOutputElement = document.getElementById('asciiOutput');
+  var asciiText = asciiOutputElement.innerText;
+
+  exportAsciiToSVG(asciiText, "ascii_art.svg");
+}
+
+
+function ExportToSVG(rendererSVG, filename) {
+  var XMLS = new XMLSerializer();
+  var svgfile = XMLS.serializeToString(rendererSVG.domElement);
+  var svgData = svgfile;
+  var preface = '<?xml version="1.0" standalone="no"?>\r\n';
+  var svgBlob = new Blob([preface, svgData], {
+      type: "image/svg+xml;charset=utf-8"
+  });
+  var svgUrl = URL.createObjectURL(svgBlob);
+  var downloadLink = document.createElement("a");
+  
+  downloadLink.href = svgUrl;
+  downloadLink.download = filename;
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  document.body.removeChild(downloadLink);
+}
+
+
+let currentObjIndex = 0;
 
 // Event listener for shape switching
 window.addEventListener('keydown', (event) => {
-  if (event.key === '1') {
+  if (event.key === 'R' || event.key === 'r') { // 'R' key toggles rotation
+    isRotationEnabled = !isRotationEnabled;
+  } else if (event.key === '1') {
       switchShape(createHeart());
   } else if (event.key === '2') {
       switchShape(createSphere());
@@ -350,7 +486,12 @@ window.addEventListener('keydown', (event) => {
   } else if (event.key === '4') { 
       const swarm = createSwarm(); 
       switchShape(swarm);
-  }
+  } else if (event.key === '5') {
+        loadObjModel(objFiles[currentObjIndex], switchToObjModel, handleModelError);
+
+        // Increment the index and loop back if necessary
+        currentObjIndex = (currentObjIndex + 1) % objFiles.length;
+    }
 });
 
     // Initialize and start the animation
