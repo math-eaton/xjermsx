@@ -5,8 +5,6 @@ import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js'
 import { createNoise3D } from 'simplex-noise';
 import { SVGRenderer } from 'three/examples/jsm/renderers/SVGRenderer.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 
 const noise3D = createNoise3D();
 
@@ -91,15 +89,6 @@ export function asciiShader(containerId) {
 
     // Add AsciiEffect DOM element to the container
     document.getElementById(containerId).appendChild(effect.domElement);
-
-    // event listener for output DL
-    // document.getElementById('downloadSVG').addEventListener('click', btnSVGExportClick);
-    // document.getElementById('downloadPDF').addEventListener('click', btnPDFExportClick);
-    const downloadButton = document.getElementById('downloadPDF');
-    downloadButton.removeEventListener('click', btnPDFExportClick);
-    downloadButton.addEventListener('click', btnPDFExportClick);
-
-
 
 
     // Heart Shape
@@ -383,93 +372,6 @@ const objFiles = [
   '3D/hammer.obj',
 
 ];
-
-// render canvas to svg
-function btnSVGExportClick() {
-  var rendererSVG = new SVGRenderer();
-  
-  rendererSVG.setSize(window.innerWidth, window.innerHeight);
-  rendererSVG.render(scene, camera);
-  ExportToSVG(rendererSVG, "test.svg");
-
-}
-
-let isProcessing = false;
-
-function btnPDFExportClick() {
-    if (isProcessing) return;
-    isProcessing = true;
-
-    var asciiOutputElement = document.getElementById('asciiContainer1');
-    var asciiText = asciiOutputElement.innerText;
-    console.log("downloading");
-
-    exportAsciiEffectToPDF("capture.pdf").finally(() => {
-        isProcessing = false;
-    });
-}
-
-function exportAsciiEffectToPDF(filename) {
-  const asciiContainer = document.getElementById('asciiContainer1');
-
-  html2canvas(asciiContainer).then(canvas => {
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-
-      const doc = new jsPDF({
-          orientation: 'landscape',
-          unit: 'mm',
-          format: 'a4'
-      });
-
-      // Calculate the ratio to fit the image to the page
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const imageWidth = canvas.width;
-      const imageHeight = canvas.height;
-      const ratio = Math.min(pageWidth / imageWidth, pageHeight / imageHeight);
-
-      const scaledWidth = imageWidth * ratio;
-      const scaledHeight = imageHeight * ratio;
-
-      // Center the image on the page
-      const x = (pageWidth - scaledWidth) / 2;
-      const y = (pageHeight - scaledHeight) / 2;
-
-      // Add image to PDF
-      doc.addImage(imgData, 'JPEG', x, y, scaledWidth, scaledHeight);
-      doc.save(filename);
-  });
-}
-
-
-
-function btnSVGExportClick() {
-  // Assuming the ASCII effect outputs to an element with an ID 'asciiOutput'
-  var asciiOutputElement = document.getElementById('asciiOutput');
-  var asciiText = asciiOutputElement.innerText;
-
-  exportAsciiToSVG(asciiText, "ascii_art.svg");
-}
-
-
-function ExportToSVG(rendererSVG, filename) {
-  var XMLS = new XMLSerializer();
-  var svgfile = XMLS.serializeToString(rendererSVG.domElement);
-  var svgData = svgfile;
-  var preface = '<?xml version="1.0" standalone="no"?>\r\n';
-  var svgBlob = new Blob([preface, svgData], {
-      type: "image/svg+xml;charset=utf-8"
-  });
-  var svgUrl = URL.createObjectURL(svgBlob);
-  var downloadLink = document.createElement("a");
-  
-  downloadLink.href = svgUrl;
-  downloadLink.download = filename;
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  document.body.removeChild(downloadLink);
-}
-
 
 let currentObjIndex = 0;
 
