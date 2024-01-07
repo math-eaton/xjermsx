@@ -153,3 +153,26 @@ button:focus-visible {
   padding: 10px;
 }
 
+
+#cubeContainer {
+  position: relative;
+  width: 100%;  /* Adjust the size as needed */
+  height: 100%; /* Adjust the size as needed */
+}
+
+#cubeAsciiContainer, #cubeNormalContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  filter: grayscale(0.9) invert();
+}
+
+#cubeAsciiContainer {
+  z-index: 2;
+}
+
+#cubeNormalContainer {
+  z-index: 1;
+}

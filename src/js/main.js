@@ -8,6 +8,7 @@ import html2canvas from 'html2canvas';
 
 const asciiModule = asciiShader("asciiContainer1");
 
+document.addEventListener('DOMContentLoaded', (event) => {
 
 function switchModule(moduleName) {
   // Hide all containers
@@ -37,10 +38,18 @@ function switchModule(moduleName) {
       document.getElementById('asciiContainer1').style.display = 'block';
       break;
     case 'isometricCube3D':
+      if (!document.getElementById('cubeAsciiContainer') || !document.getElementById('cubeNormalContainer')) {
+        // Re-create the necessary divs if they don't exist
+        const cubeContainer = document.getElementById('cubeContainer1');
+        cubeContainer.innerHTML = `
+          <div id="cubeNormalContainer"></div>
+          <div id="cubeAsciiContainer"></div>
+        `;
+      }
       document.getElementById('cubeContainer1').style.display = 'block';
       setTimeout(() => isometricCube3D("cubeContainer1"), 0); // Defer initialization
       break;  
-default:
+  default:
       console.error("Unknown module:", moduleName);
   }
 
@@ -218,7 +227,4 @@ if (exportButton) {
   console.error('Export button not found');
 }
 
-document.addEventListener('DOMContentLoaded', (event) => {
-  console.log('Script loaded');
-  // Comment out other code for testing
-});
+})
