@@ -40,15 +40,13 @@ export function isometricCube3D(containerId) {
     let cyanPointCloud = createPointCloud(pointCloudDensity, cyanColor);
     let magentaPointCloud = createPointCloud(pointCloudDensity, magentaColor);
     let yellowPointCloud = createPointCloud(pointCloudDensity, yellowColor);
-    scene.add(cyanPointCloud);
-    scene.add(magentaPointCloud);
-    scene.add(yellowPointCloud);
-
-    // Add a red sphere for troubleshooting
-    addRedSphereToScene(scene);
+    // scene.add(cyanPointCloud);
+    // scene.add(magentaPointCloud);
+    // scene.add(yellowPointCloud);
 
     // Camera positioning
     camera.position.z = 500;
+    camera.up.set(0,1,0);
 
     // Animation loop
     function animate() {
@@ -70,30 +68,66 @@ export function isometricCube3D(containerId) {
     });
 }
 
+// // fully filled cube voxel style
+// function createIsometricCube(size, grid) {
+//     let group = new THREE.Group();
+
+//     // Create box geometry and material
+//     let geometry = new THREE.BoxGeometry(size, size, size);
+//     let edges = new THREE.EdgesGeometry(geometry);
+//     let material = new THREE.LineBasicMaterial({ color: 0xffffff });
+//     let cube = new THREE.LineSegments(edges, material);
+//     group.add(cube);
+
+//     // Create grid lines on each face of the cube
+//     let step = size / grid;
+//     let halfSize = size / 2;
+//     for (let i = -halfSize; i <= halfSize; i += step) {
+//         for (let j = -halfSize; j <= halfSize; j += step) {
+//             // Lines parallel to X-axis
+//             addLine(group, [-halfSize, i, j], [halfSize, i, j]);
+
+//             // Lines parallel to Y-axis
+//             addLine(group, [i, -halfSize, j], [i, halfSize, j]);
+
+//             // Lines parallel to Z-axis
+//             addLine(group, [i, j, -halfSize], [i, j, halfSize]);
+//         }
+//     }
+
+//     return group;
+// }
+
 function createIsometricCube(size, grid) {
     let group = new THREE.Group();
 
-    // Create box geometry and material
-    let geometry = new THREE.BoxGeometry(size, size, size);
-    let edges = new THREE.EdgesGeometry(geometry);
-    let material = new THREE.LineBasicMaterial({ color: 0xffffff });
-    let cube = new THREE.LineSegments(edges, material);
-    group.add(cube);
-
-    // Create grid lines on each face of the cube
-    let step = size / grid;
     let halfSize = size / 2;
+    let step = size / grid;
+
+    // Helper function to add lines with face name
+    function addLineWithFaceName(group, start, end, faceName) {
+        let line = addLine(group, start, end);
+        line.faceName = faceName;  // Assign a face name to the line
+        return line;
+    }
+
+    // Draw grid lines for each face of the cube
     for (let i = -halfSize; i <= halfSize; i += step) {
-        for (let j = -halfSize; j <= halfSize; j += step) {
-            // Lines parallel to X-axis
-            addLine(group, [-halfSize, i, j], [halfSize, i, j]);
+        // Bottom face grid lines keep
+        addLineWithFaceName(group, [-halfSize, -halfSize, i], [halfSize, -halfSize, i], 'bottom'); // Parallel to X
+        addLineWithFaceName(group, [i, -halfSize, -halfSize], [i, -halfSize, halfSize], 'bottom'); // Parallel to Z
 
-            // Lines parallel to Y-axis
-            addLine(group, [i, -halfSize, j], [i, halfSize, j]);
+        // Top face grid lines maybe keep
+        addLineWithFaceName(group, [-halfSize, halfSize, i], [halfSize, halfSize, i], 'top'); // Parallel to X
+        addLineWithFaceName(group, [i, halfSize, -halfSize], [i, halfSize, halfSize], 'top'); // Parallel to Z
 
-            // Lines parallel to Z-axis
-            addLine(group, [i, j, -halfSize], [i, j, halfSize]);
-        }
+        // Left side face grid lines keep
+        addLineWithFaceName(group, [-halfSize, i, -halfSize], [-halfSize, i, halfSize], 'left'); // Parallel to Z
+        addLineWithFaceName(group, [-halfSize, -halfSize, i], [-halfSize, halfSize, i], 'left'); // Parallel to Y
+
+        // Back face grid lines
+        addLineWithFaceName(group, [-halfSize, i, -halfSize], [halfSize, i, -halfSize], 'back'); // Parallel to X
+        addLineWithFaceName(group, [i, -halfSize, -halfSize], [i, halfSize, -halfSize], 'back'); // Parallel to Z
     }
 
     return group;
@@ -107,7 +141,9 @@ function addLine(group, start, end) {
     ]);
     let line = new THREE.Line(geometry, material);
     group.add(line);
+    return line;
 }
+
 
 function createPointCloud(density, color) {
     let points = [];
@@ -139,17 +175,4 @@ function createPointCloud(density, color) {
     group.add(convexHull);
 
     return group;
-}
-
-
-function addRedSphereToScene(scene) {
-    let sphereGeometry = new THREE.SphereGeometry(10, 32, 32); // Radius, width segments, height segments
-    let sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Bright red color
-    let sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-
-    // Position the sphere (Optional: adjust the position as needed)
-    sphere.position.set(0, 0, 0);
-
-    // Add the sphere to the scene
-    scene.add(sphere);
 }
