@@ -34,7 +34,10 @@ export function isometricCube3D(containerId) {
 
     // Add isometric cube
     let isoCube = createIsometricCube(cubeSize, gridSize);
+    let voxelCube = createVoxels(cubeSize, gridSize)
     scene.add(isoCube);
+    scene.add(voxelCube);
+
 
     // Create point clouds
     let cyanPointCloud = createPointCloud(pointCloudDensity, cyanColor);
@@ -69,34 +72,65 @@ export function isometricCube3D(containerId) {
 }
 
 // // fully filled cube voxel style
-// function createIsometricCube(size, grid) {
-//     let group = new THREE.Group();
+function createVoxels(cubeSize, gridSize) {
+    let group = new THREE.Group();
+    let voxelSize = cubeSize / gridSize;
+    let halfCubeSize = cubeSize / 2;
+    let halfVoxelSize = voxelSize / 2;
 
-//     // Create box geometry and material
-//     let geometry = new THREE.BoxGeometry(size, size, size);
-//     let edges = new THREE.EdgesGeometry(geometry);
-//     let material = new THREE.LineBasicMaterial({ color: 0xffffff });
-//     let cube = new THREE.LineSegments(edges, material);
-//     group.add(cube);
+    let material = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        wireframe: true,
+        transparent: false,
+        opacity: 0.85,
+        alphaHash: false,
+    });
+    let geometry = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+    let voxels = [];  // Array to store all voxels
 
-//     // Create grid lines on each face of the cube
-//     let step = size / grid;
-//     let halfSize = size / 2;
-//     for (let i = -halfSize; i <= halfSize; i += step) {
-//         for (let j = -halfSize; j <= halfSize; j += step) {
-//             // Lines parallel to X-axis
-//             addLine(group, [-halfSize, i, j], [halfSize, i, j]);
+    for (let x = -halfCubeSize; x < halfCubeSize; x += voxelSize) {
+        for (let y = -halfCubeSize; y < halfCubeSize; y += voxelSize) {
+            for (let z = -halfCubeSize; z < halfCubeSize; z += voxelSize) {
+                let voxel = new THREE.Mesh(geometry, material);
+                voxel.position.set(x + halfVoxelSize, y + halfVoxelSize, z + halfVoxelSize);
+                voxel.visible = false; // Initially set all voxels to be invisible
+                group.add(voxel);
+                voxels.push(voxel); // Store voxel in the array
+            }
+        }
+    }
 
-//             // Lines parallel to Y-axis
-//             addLine(group, [i, -halfSize, j], [i, halfSize, j]);
+    // Function to randomly display one voxel
+    let currentVisibleVoxels = 0; // Initialize outside the function
 
-//             // Lines parallel to Z-axis
-//             addLine(group, [i, j, -halfSize], [i, j, halfSize]);
-//         }
-//     }
+    function displayRandomVoxel() {
+        // Hide all voxels
+        voxels.forEach(v => v.visible = false);
+    
+        // Randomly decide to add, subtract, or maintain the number of voxels
+        let change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+        currentVisibleVoxels = Math.max(0, Math.min(8, currentVisibleVoxels + change));
+    
+        // Create a set to store indices of voxels to be shown
+        let indicesToShow = new Set();
+    
+        // Randomly choose distinct voxels to display
+        while (indicesToShow.size < currentVisibleVoxels) {
+            let randomIndex = Math.floor(Math.random() * voxels.length);
+            indicesToShow.add(randomIndex);
+        }
+    
+        // Make the selected voxels visible
+        indicesToShow.forEach(index => {
+            voxels[index].visible = true;
+        });
+    }
+            
+    // Set an interval to update the displayed voxel
+    setInterval(displayRandomVoxel, 50);
 
-//     return group;
-// }
+    return group;
+}
 
 function createIsometricCube(size, grid) {
     let group = new THREE.Group();
