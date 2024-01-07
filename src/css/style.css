@@ -121,6 +121,13 @@ button:focus-visible {
   filter: grayscale(0.9) invert();
 }
 
+#cubeContainer1 {
+  width: 100vw; 
+  height: 100vh;
+  filter: grayscale(0.9);
+}
+
+
 .module-selector {
   position: fixed;
   bottom: 2vh;

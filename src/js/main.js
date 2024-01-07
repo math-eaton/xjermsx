@@ -2,6 +2,7 @@
 import { afterDark } from "./afterDark.js";
 import { afterDark3D } from "./afterDark3D.js";
 import { asciiShader } from "./ascii_shader.js";
+import { isometricCube3D } from "./isometricCube3D.js";
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -13,11 +14,13 @@ function switchModule(moduleName) {
   document.getElementById('skylineContainer1').style.display = 'none';
   document.getElementById('skyline3DContainer1').style.display = 'none';
   document.getElementById('asciiContainer1').style.display = 'none';
+  document.getElementById('cubeContainer1').style.display = 'none';
 
   // Clear containers to ensure canvases are removed
   document.getElementById('skylineContainer1').innerHTML = '';
   document.getElementById('skyline3DContainer1').innerHTML = '';
   document.getElementById('asciiContainer1').innerHTML = '';
+  document.getElementById('cubeContainer1').innerHTML = '';
 
   // Activate the selected module and show its container
   switch (moduleName) {
@@ -33,7 +36,11 @@ function switchModule(moduleName) {
       asciiShader("asciiContainer1");
       document.getElementById('asciiContainer1').style.display = 'block';
       break;
-    default:
+    case 'isometricCube3D':
+      document.getElementById('cubeContainer1').style.display = 'block';
+      setTimeout(() => isometricCube3D("cubeContainer1"), 0); // Defer initialization
+      break;  
+default:
       console.error("Unknown module:", moduleName);
   }
 
@@ -56,6 +63,7 @@ window.onload = () => {
 document.getElementById('btnAfterDark').addEventListener('click', () => switchModule('afterDark'));
 document.getElementById('btnAfterDark3D').addEventListener('click', () => switchModule('afterDark3D'));
 document.getElementById('btnAsciiShader').addEventListener('click', () => switchModule('asciiShader'));
+document.getElementById('btnIsometricCube').addEventListener('click', () => switchModule('isometricCube3D'));
 // document.getElementById('btnHeart').addEventListener('click', () => asciiModule.switchShape(createHeart()));
 // document.getElementById('btnSphere').addEventListener('click', () => asciiModule.switchShape(createSphere()));
 // document.getElementById('btnTorus').addEventListener('click', () => asciiModule.switchShape(createTorus()));
@@ -69,7 +77,8 @@ function handleResize() {
   // Update container sizes
   const containers = [document.getElementById('skylineContainer1'), 
                       document.getElementById('skyline3DContainer1'), 
-                      document.getElementById('asciiContainer1')];
+                      document.getElementById('asciiContainer1'),
+                      document.getElementById('cubeContainer1')];
   
   containers.forEach(container => {
     if (container.style.display !== 'none') {
@@ -83,6 +92,8 @@ function handleResize() {
       } else if (container.id === 'skyline3DContainer1' && afterDark3D.resize) {
         afterDark3D.resize();
       } else if (container.id === 'asciiContainer1' && asciiShader.resize) {
+        asciiShader.resize();
+      } else if (container.id === 'cubeContainer1' && isometricCube3D.resize) {
         asciiShader.resize();
       }
     }
@@ -187,6 +198,8 @@ function getActiveContainerId() {
     return 'skyline3DContainer1';
   } else if (document.getElementById('asciiContainer1').style.display !== 'none') {
     return 'asciiContainer1';
+  } else if (document.getElementById('cubeContainer1').style.display !== 'none') {
+    return 'cubeContainer1';
   }
   return null; // or a default container ID
 }

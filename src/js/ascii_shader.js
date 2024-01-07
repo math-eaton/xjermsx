@@ -70,6 +70,7 @@ export function asciiShader(containerId) {
     const asciiOptions = {
         invert: true,
         resolution: 0.175, // Adjust for more or less detail
+        // resolution: 0.3,
         scale: 1.0,       // Adjust based on your display requirements
         color: false,     // Set to true if you want colored ASCII characters
         block: false,
@@ -214,6 +215,13 @@ function animate() {
       container.removeChild(effect.domElement);
     }
   }
+
+  function resetRotation() {
+    if (currentShape) {
+      // Reset rotation to initial state
+      currentShape.rotation.set(0, 0, 0);
+    }
+  }  
 
   function switchShape({ shape, centroid }) {
     if (!shape || !centroid) {
@@ -395,9 +403,10 @@ function handleModelError(error) {
 
 const objFiles = [
   '3D/horse2.obj',
-  '3D/hammer.obj',
-  '3D/altostratus00.obj',
-  '3D/altostratus01.obj',
+  '3D/cow.obj',
+  // '3D/hammer.obj',
+  // '3D/head.obj',
+  // '3D/television.obj',
 
 
 ];
@@ -408,6 +417,8 @@ let currentObjIndex = 0;
 window.addEventListener('keydown', (event) => {
   if (event.key === 'R' || event.key === 'r') { // 'R' key toggles rotation
     isRotationEnabled = !isRotationEnabled;
+  } else if (event.key === 'T' || event.key === 't') {
+    resetRotation();
   } else if (event.key === '1') {
       switchShape(createHeart());
   } else if (event.key === '2') {
