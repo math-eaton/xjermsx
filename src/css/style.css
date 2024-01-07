@@ -124,7 +124,7 @@ button:focus-visible {
 #cubeContainer1 {
   width: 100vw; 
   height: 100vh;
-  filter: grayscale(0.9);
+  /* filter: grayscale(0.9); */
 }
 
 
