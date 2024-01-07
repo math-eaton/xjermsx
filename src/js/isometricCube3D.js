@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
-import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
 
 export function isometricCube3D(containerId) {
     let containerDiv = document.getElementById(containerId);
@@ -14,55 +13,14 @@ export function isometricCube3D(containerId) {
     renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
     containerDiv.appendChild(renderer.domElement);
 
-    const normalRenderer = new THREE.WebGLRenderer();
-    normalRenderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('cubeNormalContainer').appendChild(normalRenderer.domElement);
-
-
-    // Setup for the ASCII renderer and scene
-    const asciiRenderer = new THREE.WebGLRenderer();
-    const customCharSet = ' ♡❣♥®x6☹%&*⛆@#❤☺☻  '
-    const asciiOptions = {
-        invert: true,
-        resolution: 0.3, // Adjust for more or less detail
-        // resolution: 0.3,
-        scale: 1.0,       // Adjust based on your display requirements
-        color: false,     // Set to true if you want colored ASCII characters
-        block: false,
-    };  
-    const asciiEffect = new AsciiEffect(asciiRenderer, customCharSet, asciiOptions);
-    asciiEffect.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('cubeAsciiContainer').appendChild(asciiEffect.domElement);
-    const asciiScene = new THREE.Scene();
-    // asciiRenderer.setClearColor(0x000000, 0); // Transparent background
-
     // Orbit controls setup
-    let controls = new OrbitControls(camera, asciiRenderer.domElement);
+    let controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     controls.rotateSpeed = 0.1;
     controls.maxPolarAngle = Math.PI / 2;
     controls.minDistance = 100;
     controls.maxDistance = 500;
-
-    // lighting
-
-    // Add a static light with high intensity and distance
-    const light = new THREE.PointLight(0xffffff, 3, 500);
-    light.position.set(0,0,10);
-    light.color.set(0x0000ff); // Blue color
-    asciiScene.add(light);
-
-    //  ambient light for softer overall scene illumination
-    const ambientLight = new THREE.AmbientLight(0x404040, 1);
-    asciiScene.add(ambientLight);
-
-    // Directional light
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight.position.set(5, 15, 5);
-    asciiScene.add(dirLight);
-    console.log("added ", dirLight)
-    
 
     // Colors
     let cyanColor = new THREE.Color(0x00ffff);
@@ -78,13 +36,8 @@ export function isometricCube3D(containerId) {
     let isoCube = createIsometricCube(cubeSize, gridSize);
     let voxelCube = createVoxels(cubeSize, gridSize)
     scene.add(isoCube);
-    // scene.add(voxelCube);
+    scene.add(voxelCube);
 
-
-    // Create voxel group for ASCII scene
-    let voxelGroup = createVoxels(cubeSize, gridSize);
-    asciiScene.add(voxelGroup);
-    
 
     // Create point clouds
     let cyanPointCloud = createPointCloud(pointCloudDensity, cyanColor);
@@ -105,24 +58,16 @@ export function isometricCube3D(containerId) {
         // Update controls
         controls.update();
 
-        // Render the ASCII scene
-        asciiEffect.render(asciiScene, camera);
-
-        // Render the normal scene
+        // Render the scene
         renderer.render(scene, camera);
     }
     animate();
 
     // Resize handler
     window.addEventListener('resize', () => {
-        let width = containerDiv.offsetWidth;
-        let height = containerDiv.offsetHeight;
-        camera.aspect = width / height;
+        camera.aspect = containerDiv.offsetWidth / containerDiv.offsetHeight;
         camera.updateProjectionMatrix();
-    
-        renderer.setSize(width, height);
-        asciiRenderer.setSize(width, height);
-        asciiEffect.setSize(width, height);
+        renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
     });
 }
 
@@ -134,8 +79,8 @@ function createVoxels(cubeSize, gridSize) {
     let halfVoxelSize = voxelSize / 2;
 
     let material = new THREE.MeshBasicMaterial({
-        color: 0xF00FFF,
-        wireframe: false,
+        color: 0xFFFFFF,
+        wireframe: true,
         transparent: false,
         opacity: 0.85,
         alphaHash: false,
@@ -164,7 +109,7 @@ function createVoxels(cubeSize, gridSize) {
     
         // Randomly decide to add, subtract, or maintain the number of voxels
         let change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-        currentVisibleVoxels = Math.max(1, Math.min(8, currentVisibleVoxels + change));
+        currentVisibleVoxels = Math.max(0, Math.min(8, currentVisibleVoxels + change));
     
         // Create a set to store indices of voxels to be shown
         let indicesToShow = new Set();
@@ -182,7 +127,7 @@ function createVoxels(cubeSize, gridSize) {
     }
             
     // Set an interval to update the displayed voxel
-    setInterval(displayRandomVoxel, 500);
+    setInterval(displayRandomVoxel, 50);
 
     return group;
 }
