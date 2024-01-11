@@ -5,102 +5,21 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 
+let isUpdating = true;
 
-export function isometricCube3D(containerId) {
-    let containerDiv = document.getElementById(containerId);
-    console.log("Container dimensions:", containerDiv.offsetWidth, containerDiv.offsetHeight);
+function preloadObjModels(objUrls, onLoadComplete) {
+    let loader = new OBJLoader();
+    let models = [];
+    let loadedCount = 0;
 
-    // Scene, camera, and renderer setup
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, containerDiv.offsetWidth / containerDiv.offsetHeight, 0.1, 1000);
-    let renderer = new THREE.WebGLRenderer();
-    renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
-    containerDiv.appendChild(renderer.domElement);
-
-    // Orbit controls setup
-    let controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.1;
-    controls.rotateSpeed = 0.1;
-    controls.maxPolarAngle = Math.PI / 2;
-    controls.minDistance = 50;
-    controls.maxDistance = 500;
-
-    // Colors
-    let cyanColor = new THREE.Color(0x00ffff);
-    let magentaColor = new THREE.Color(0xff00ff);
-    let yellowColor = new THREE.Color(0xffff00);
-
-    // Cube and grid parameters
-    const cubeSize = 250;
-    const gridSize = 8;
-    const pointCloudDensity = 20;
-    const scaleFactor = 0.8;
-    const objScaleFactor = 2;
-
-    // Define ASCII characters to be used
-    const asciiCharacters = "XJERMSX";
-    
-    // Load the font and then create the scene
-    loadFont('font/optimer_regular.typeface.json', (font) => {
-        // Now the font is loaded, you can safely create ASCII voxels
-        let asciiVoxelGroup = createAsciiVoxels(cubeSize, gridSize, asciiCharacters, font, scaleFactor);
-        scene.add(asciiVoxelGroup);
-
-    let objUrls = ['3D/horse2.obj', '3D/cow.obj', '3D/head.OBJ', '3D/hammer.obj' ];
-    preloadObjModels(objUrls, (models) => {
-        let objVoxelGroup = createRandomObjVoxels(cubeSize, gridSize, models, objScaleFactor);
-        console.log(objVoxelGroup)
-        scene.add(objVoxelGroup);
-    });       
-        
-    // Add isometric cube
-    let isoCube = createIsometricCube(cubeSize, gridSize, scaleFactor);
-    let voxelCube = createCubes(cubeSize, gridSize, scaleFactor)
-    let sphere = createSpheres(cubeSize, gridSize, scaleFactor)
-    scene.add(isoCube);
-    // scene.add(voxelCube);
-    // scene.add(sphere);
-
-    // Create point clouds
-    // let cyanPointCloud = createPointCloud(pointCloudDensity, cyanColor);
-    // let magentaPointCloud = createPointCloud(pointCloudDensity, magentaColor);
-    // let yellowPointCloud = createPointCloud(pointCloudDensity, yellowColor);
-    // scene.add(cyanPointCloud);
-    // scene.add(magentaPointCloud);
-    // scene.add(yellowPointCloud);
-
-    // Camera positioning
-    camera.position.z = 500;
-    camera.up.set(0,1,0);
-
-    // Animation loop
-    function animate() {
-        requestAnimationFrame(animate);
-
-        // Update controls
-        controls.update();
-
-        // Render the scene
-        renderer.render(scene, camera);
-    }
-    animate();
-
-    // Resize handler
-    window.addEventListener('resize', () => {
-        camera.aspect = containerDiv.offsetWidth / containerDiv.offsetHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
-    });
-})
-}
-
-function loadFont(url, callback) {
-    let loader = new FontLoader();
-    loader.load(url, function (loadedFont) {
-        callback(loadedFont);
-    }, undefined, function (error) {
-        console.error('An error occurred while loading the font:', error);
+    objUrls.forEach(url => {
+        loader.load(url, (obj) => {
+            models.push(obj);
+            loadedCount++;
+            if (loadedCount === objUrls.length) {
+                onLoadComplete(models);
+            }
+        });
     });
 }
 
@@ -170,6 +89,10 @@ function createAsciiVoxels(cubeSize, gridSize, characters, font, scaleFactor) {
     }
 
     function displayRandomVoxel() {
+
+        // Check if updates are enabled
+        if (!updateEnabled) return;
+
         // Clear visiblePoints array
         visiblePoints = [];
 
@@ -218,6 +141,38 @@ function createAsciiVoxels(cubeSize, gridSize, characters, font, scaleFactor) {
         // Update the convex hull
         updateConvexHull();
     }
+
+    // Start the interval for continuous updates
+    function startUpdateInterval() {
+        if (!isUpdating) {
+            updateInterval = setInterval(displayRandomVoxel, 100); // Adjust the interval as needed
+            isUpdating = true;
+        }
+    }
+
+    // Stop the interval
+    function stopUpdateInterval() {
+        if (isUpdating) {
+            clearInterval(updateInterval);
+            isUpdating = false;
+        }
+    }
+
+    // Event listener for key press
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 't' || event.key === 'T') {
+            displayRandomVoxel(); // Randomize once without toggling the interval
+        } else if (event.key === 'r' || event.key === 'R') {
+            if (isUpdating) {
+                stopUpdateInterval(); // Stop the continuous update
+            } else {
+                startUpdateInterval(); // Start the continuous update
+            }
+        }
+    });
+
+    // Start the interval initially
+    startUpdateInterval();
 
     // Set an interval to update the displayed voxel
     setInterval(displayRandomVoxel, 100);
@@ -353,21 +308,6 @@ function createSpheres(cubeSize, gridSize, scaleFactor) {
     return group;
 }
 
-function preloadObjModels(objUrls, onLoadComplete) {
-    let loader = new OBJLoader();
-    let models = [];
-    let loadedCount = 0;
-
-    objUrls.forEach(url => {
-        loader.load(url, (obj) => {
-            models.push(obj);
-            loadedCount++;
-            if (loadedCount === objUrls.length) {
-                onLoadComplete(models);
-            }
-        });
-    });
-}
 
 function createRandomObjVoxels(cubeSize, gridSize, models, objScaleFactor) {
     let group = new THREE.Group();
@@ -496,38 +436,102 @@ function addLine(group, start, end) {
 }
 
 
-// function createPointCloud(density, color) {
-//     let points = [];
-//     let positions = [];
+export function isometricCube3D(containerId) {
+    let containerDiv = document.getElementById(containerId);
+    console.log("Container dimensions:", containerDiv.offsetWidth, containerDiv.offsetHeight);
 
-//     for (let i = 0; i < density; i++) {
-//         // Randomly position points within a cube
-//         let x = Math.random() * 200 - 100;
-//         let y = Math.random() * 200 - 100;
-//         let z = Math.random() * 200 - 100;
-//         points.push(new THREE.Vector3(x, y, z));
-//         positions.push(x, y, z); // Add positions as flat array
-//     }
+    // Scene, camera, and renderer setup
+    let scene = new THREE.Scene();
+    let camera = new THREE.PerspectiveCamera(75, containerDiv.offsetWidth / containerDiv.offsetHeight, 0.1, 1000);
+    let renderer = new THREE.WebGLRenderer();
+    renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
+    containerDiv.appendChild(renderer.domElement);
 
-//     let pointsGeometry = new THREE.BufferGeometry();
-//     pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    // Orbit controls setup
+    let controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.rotateSpeed = 0.1;
+    controls.maxPolarAngle = Math.PI / 2;
+    controls.minDistance = 50;
+    controls.maxDistance = 500;
 
-//     let pointsMaterial = new THREE.PointsMaterial({ color: color, size: 1 });
-//     let pointCloud = new THREE.Points(pointsGeometry, pointsMaterial);
+    // Colors
+    let cyanColor = new THREE.Color(0x00ffff);
+    let magentaColor = new THREE.Color(0xff00ff);
+    let yellowColor = new THREE.Color(0xffff00);
 
-//     // Create the convex hull geometry
-//     let hullGeometry = new ConvexGeometry(points);
-//     let hullMaterial = new THREE.MeshBasicMaterial({ 
-//         color: color,
-//         transparent: true,
-//         opacity: 0.5, 
-//         wireframe: true });
-//     let convexHull = new THREE.Mesh(hullGeometry, hullMaterial);
+    // Cube and grid parameters
+    const cubeSize = 250;
+    const gridSize = 8;
+    const pointCloudDensity = 20;
+    const scaleFactor = 0.8;
+    const objScaleFactor = 2;
 
-//     // Group the point cloud and its convex hull
-//     let group = new THREE.Group();
-//     group.add(pointCloud);
-//     group.add(convexHull);
+    // Define ASCII characters to be used
+    const asciiCharacters = "XJERMSX";
+    
+    // Load the font and then create the scene
+    loadFont('font/optimer_regular.typeface.json', (font) => {
+        // Now the font is loaded, you can safely create ASCII voxels
+        let asciiVoxelGroup = createAsciiVoxels(cubeSize, gridSize, asciiCharacters, font, scaleFactor);
+        scene.add(asciiVoxelGroup);
 
-//     return group;
-// }
+    let objUrls = ['3D/horse2.obj', '3D/cow.obj', '3D/head.OBJ', '3D/hammer.obj' ];
+    preloadObjModels(objUrls, (models) => {
+        let objVoxelGroup = createRandomObjVoxels(cubeSize, gridSize, models, objScaleFactor);
+        console.log(objVoxelGroup)
+        scene.add(objVoxelGroup);
+    });       
+        
+    // Add isometric cube
+    let isoCube = createIsometricCube(cubeSize, gridSize, scaleFactor);
+    let voxelCube = createCubes(cubeSize, gridSize, scaleFactor)
+    let sphere = createSpheres(cubeSize, gridSize, scaleFactor)
+    scene.add(isoCube);
+    // scene.add(voxelCube);
+    // scene.add(sphere);
+
+    // Camera positioning
+    camera.position.z = 500;
+    camera.up.set(0,1,0);
+
+    let updateInterval;
+    isUpdating = true; // Flag to track the update state
+
+    function toggleUpdate() {
+        updateEnabled = !updateEnabled; // Toggle the update state
+    }
+
+    // Start the interval initially
+    startUpdateInterval();
+
+    // Animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Update controls
+        controls.update();
+
+        // Render the scene
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+        camera.aspect = containerDiv.offsetWidth / containerDiv.offsetHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(containerDiv.offsetWidth, containerDiv.offsetHeight);
+    });
+})
+}
+
+function loadFont(url, callback) {
+    let loader = new FontLoader();
+    loader.load(url, function (loadedFont) {
+        callback(loadedFont);
+    }, undefined, function (error) {
+        console.error('An error occurred while loading the font:', error);
+    });
+}

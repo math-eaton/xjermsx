@@ -3,6 +3,7 @@ import { afterDark } from "./afterDark.js";
 import { afterDark3D } from "./afterDark3D.js";
 import { asciiShader } from "./ascii_shader.js";
 import { isometricCube3D } from "./isometricCube3D.js";
+import { wordSearch } from "./wordSearch.js";
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -15,12 +16,16 @@ function switchModule(moduleName) {
   document.getElementById('skyline3DContainer1').style.display = 'none';
   document.getElementById('asciiContainer1').style.display = 'none';
   document.getElementById('cubeContainer1').style.display = 'none';
+  document.getElementById('wordSearchContainer1').style.display = 'none';
+
 
   // Clear containers to ensure canvases are removed
   document.getElementById('skylineContainer1').innerHTML = '';
   document.getElementById('skyline3DContainer1').innerHTML = '';
   document.getElementById('asciiContainer1').innerHTML = '';
   document.getElementById('cubeContainer1').innerHTML = '';
+  document.getElementById('wordSearchContainer1').innerHTML = '';
+
 
   // Activate the selected module and show its container
   switch (moduleName) {
@@ -40,6 +45,11 @@ function switchModule(moduleName) {
       document.getElementById('cubeContainer1').style.display = 'block';
       setTimeout(() => isometricCube3D("cubeContainer1"), 0); // Defer initialization
       break;  
+    case 'wordSearch':
+      document.getElementById('wordSearchContainer1').style.display = 'block';
+      setTimeout(() => wordSearch("wordSearchContainer1"), 0); 
+      break;  
+  
 default:
       console.error("Unknown module:", moduleName);
   }
@@ -64,6 +74,7 @@ document.getElementById('btnAfterDark').addEventListener('click', () => switchMo
 document.getElementById('btnAfterDark3D').addEventListener('click', () => switchModule('afterDark3D'));
 document.getElementById('btnAsciiShader').addEventListener('click', () => switchModule('asciiShader'));
 document.getElementById('btnIsometricCube').addEventListener('click', () => switchModule('isometricCube3D'));
+document.getElementById('btnWordSearch').addEventListener('click', () => switchModule('wordSearch'));
 // document.getElementById('btnHeart').addEventListener('click', () => asciiModule.switchShape(createHeart()));
 // document.getElementById('btnSphere').addEventListener('click', () => asciiModule.switchShape(createSphere()));
 // document.getElementById('btnTorus').addEventListener('click', () => asciiModule.switchShape(createTorus()));
