@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { AsciiEffect } from 'three/examples/jsm/effects/AsciiEffect.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { MapControls } from 'three/examples/jsm/controls/MapControls.js';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js';
 import { createNoise3D } from 'simplex-noise';
 import { SVGRenderer } from 'three/examples/jsm/renderers/SVGRenderer.js';
@@ -10,7 +12,7 @@ const noise3D = createNoise3D();
 
 
 export function asciiShader(containerId) {
-  let scene, camera, renderer, movingLight, effect, sphere, heart, currentShape;
+  let scene, camera, renderer, controls, movingLight, effect, sphere, heart, currentShape;
   let animationFrameId;
   let scaleDirection = 1;
   let scaleSpeed = 0;
@@ -62,11 +64,12 @@ export function asciiShader(containerId) {
     // Renderer
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xf0f0f0);
 
     // AsciiEffect
     // Custom CharSet and Options
     // const customCharSet = 'x♡♥☦*⭒♥'
-    const customCharSet = '░♡❣♥®x6☹%&*⛆@#❤☺☻  '
+    const customCharSet = ' ♡❣♥☺x6☹%&*⛆@#❤☺☻  '
     const asciiOptions = {
         invert: true,
         resolution: 0.175, // Adjust for more or less detail
@@ -81,11 +84,7 @@ export function asciiShader(containerId) {
     effect.setSize(window.innerWidth, window.innerHeight);
 
     // Adjust text color and background color
-    effect.domElement.style.color = 'cyan'; // Change text color here
-    effect.domElement.style.backgroundColor = 'black'; // Change background color here
-
-
-    effect.domElement.style.color = 'white'; // Adjust text color as needed
+    effect.domElement.style.color = 'black'; // Adjust text color as needed
     effect.domElement.style.backgroundColor = 'white'; // Adjust background color as needed
 
     // Add AsciiEffect DOM element to the container
@@ -109,10 +108,21 @@ export function asciiShader(containerId) {
     geometry.center();
 
     // OrbitControls
-    const controls = new OrbitControls(camera, effect.domElement);
+    controls = new OrbitControls(camera, effect.domElement);
+    // controls = new MapControls( camera, effect.domElement );
+    // controls = new TrackballControls(camera, renderer.domElement);
+
+    console.log('Controls after init:', controls); // Debug log
     controls.enableDamping = true; // Optional, but makes the controls smoother
     controls.dampingFactor = 0.1;
     controls.enableZoom = true;
+
+    controls.rotateSpeed = 5.0; // Increase rotation speed
+    controls.zoomSpeed = 1.2; // Increase zoom speed
+    controls.panSpeed = 0.8; // Increase pan speed
+    controls.dynamicDampingFactor = 0.2; // Lower damping factor for quicker stop
+    controls.staticMoving = false; // Set to true to stop immediately on mouse release
+
     
 
     // Handle window resize
@@ -188,9 +198,12 @@ function animate() {
       
     }
 
+    controls.update(); 
+
     // Render scene with AsciiEffect
     effect.render(scene, camera);
-}
+
+  }
 
   function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -308,7 +321,7 @@ function createHeart() {
   geometry.center();
 
   const material = new THREE.MeshPhongMaterial({
-      color: 0xffffff,
+      color: 0x000000,
       specular: 0xff00ff,
       shininess: 10,
       side: THREE.FrontSide,
@@ -333,12 +346,12 @@ function createSphere() {
 }
 
 function createTorus() {
-  let radius = 0.85; // Reduced radius
-  let tube = 0.12;   // Reduced tube size
+  let radius = 1.15; // Reduced radius
+  let tube = 0.1;   // Reduced tube size
   let tubularSegments = 100;
   let radialSegments = 160;
-  let p = 4;
-  let q = 2;
+  let p = 5;
+  let q = 3;
 
   const geometry = new THREE.TorusKnotGeometry(
     radius, 
@@ -370,7 +383,7 @@ function createSwarm() {
 
   const geometry = new ConvexGeometry(points);
   const material = new THREE.MeshStandardMaterial({ 
-      color: 0xff0000,
+      color: 0xff00ff,
       wireframe: true,
       
   });

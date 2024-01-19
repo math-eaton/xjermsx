@@ -5,7 +5,6 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 
-let isUpdating = true;
 
 function preloadObjModels(objUrls, onLoadComplete) {
     let loader = new OBJLoader();
@@ -21,163 +20,6 @@ function preloadObjModels(objUrls, onLoadComplete) {
             }
         });
     });
-}
-
-function createAsciiVoxels(cubeSize, gridSize, characters, font, scaleFactor) {
-    let group = new THREE.Group();
-    let voxelSize = cubeSize / gridSize;
-    let halfCubeSize = cubeSize / 2;
-    let voxels = [];
-    let visiblePoints = [];
-    let currentVisibleVoxels = 0; // Initialize visible voxel counter
-
-    let material = new THREE.MeshBasicMaterial({
-        color: 0xFFFFFF,
-        wireframe: false,
-        transparent: true,
-        opacity: 0.8,
-        alphaHash: true,
-    });
-
-
-    for (let x = -halfCubeSize; x < halfCubeSize; x += voxelSize) {
-        for (let y = -halfCubeSize; y < halfCubeSize; y += voxelSize) {
-            for (let z = -halfCubeSize; z < halfCubeSize; z += voxelSize) {
-                let geometry = new TextGeometry('', {
-                    font: font,
-                    size: voxelSize * 0.8,
-                    height: voxelSize / 8,
-                    curveSegments: 4,
-                    bevelEnabled: true,
-                    bevelThickness: 2,
-                    bevelSize: 1,
-                    bevelOffset: 0,
-                    bevelSegments: 3
-                });
-                let voxel = new THREE.Mesh(geometry, material);
-                voxel.position.set(x, y, z);
-                voxel.visible = false; // Initially set all voxels to be invisible
-                voxel.scale.set(scaleFactor, scaleFactor, scaleFactor)
-                group.add(voxel);
-                voxels.push(voxel); // Store voxel in the array
-            }
-        }
-    }
-
-    // Create a material for the convex hull
-    let hullMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xFFFFFF,
-        transparent: true,
-        alphaHash: true,
-        opacity: 0.6,
-        wireframe: true
-    });
-
-    let hullGeometry = new ConvexGeometry([]);
-    let convexHull = new THREE.Mesh(hullGeometry, hullMaterial);
-    group.add(convexHull);
-
-    function updateConvexHull() {
-        // Only update if there are visible points
-        if (visiblePoints.length > 0) {
-            hullGeometry.dispose(); // Dispose of the old geometry
-            hullGeometry = new ConvexGeometry(visiblePoints);
-            convexHull.geometry = hullGeometry;
-            // console.log(hullGeometry)
-
-        }
-    }
-
-    function displayRandomVoxel() {
-
-        // Check if updates are enabled
-        if (!updateEnabled) return;
-
-        // Clear visiblePoints array
-        visiblePoints = [];
-
-        // Hide all voxels and update visiblePoints
-        voxels.forEach(v => {
-            v.visible = false;
-            v.geometry = new TextGeometry('', {
-                font: font,
-                size: voxelSize,
-                height: voxelSize / 2,
-            });
-            if (v.visible) {
-                visiblePoints.push(v.position.clone());
-            }
-        });
-
-        // Randomly decide to add, subtract, or maintain the number of voxels
-        let change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
-        currentVisibleVoxels = Math.max(7, Math.min(7, currentVisibleVoxels + change));
-
-        // Randomly choose distinct voxels to display with random character
-        while (currentVisibleVoxels > 0) {
-            let randomIndex = Math.floor(Math.random() * voxels.length);
-            let randomChar = characters[Math.floor(Math.random() * characters.length)];
-            let voxel = voxels[randomIndex];
-            voxel.geometry.dispose(); // Dispose of the old geometry
-            voxel.geometry = new TextGeometry(randomChar, {
-                font: font,
-                size: voxelSize * 0.8,
-                height: voxelSize / 8,
-                curveSegments: 4,
-                bevelEnabled: true,
-                bevelThickness: 2,
-                bevelSize: 1,
-                bevelOffset: 0,
-                bevelSegments: 3
-            });
-            voxel.visible = true;
-            visiblePoints.push(voxel.position.clone());
-            currentVisibleVoxels--;
-        }
-
-        // Update visiblePoints array with positions of visible voxels
-        visiblePoints = voxels.filter(v => v.visible).map(v => v.position.clone());
-
-        // Update the convex hull
-        updateConvexHull();
-    }
-
-    // Start the interval for continuous updates
-    function startUpdateInterval() {
-        if (!isUpdating) {
-            updateInterval = setInterval(displayRandomVoxel, 100); // Adjust the interval as needed
-            isUpdating = true;
-        }
-    }
-
-    // Stop the interval
-    function stopUpdateInterval() {
-        if (isUpdating) {
-            clearInterval(updateInterval);
-            isUpdating = false;
-        }
-    }
-
-    // Event listener for key press
-    window.addEventListener('keydown', function(event) {
-        if (event.key === 't' || event.key === 'T') {
-            displayRandomVoxel(); // Randomize once without toggling the interval
-        } else if (event.key === 'r' || event.key === 'R') {
-            if (isUpdating) {
-                stopUpdateInterval(); // Stop the continuous update
-            } else {
-                startUpdateInterval(); // Start the continuous update
-            }
-        }
-    });
-
-    // Start the interval initially
-    startUpdateInterval();
-
-    // Set an interval to update the displayed voxel
-    setInterval(displayRandomVoxel, 100);
-
-    return group;
 }
 
 // // fully filled cube voxel style
@@ -388,6 +230,148 @@ function createRandomObjVoxels(cubeSize, gridSize, models, objScaleFactor) {
     return group;
 }
 
+function createAsciiVoxels(cubeSize, gridSize, characters, font, scaleFactor) {
+    let group = new THREE.Group();
+    let voxelSize = cubeSize / gridSize;
+    let halfCubeSize = cubeSize / 2;
+    let voxels = [];
+    let visiblePoints = [];
+    let currentVisibleVoxels = 0; // Initialize visible voxel counter
+
+    let material = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        wireframe: false,
+        transparent: true,
+        opacity: 0.8,
+        alphaHash: true,
+    });
+
+
+    for (let x = -halfCubeSize; x < halfCubeSize; x += voxelSize) {
+        for (let y = -halfCubeSize; y < halfCubeSize; y += voxelSize) {
+            for (let z = -halfCubeSize; z < halfCubeSize; z += voxelSize) {
+                let geometry = new TextGeometry('', {
+                    font: font,
+                    size: voxelSize * 0.8,
+                    height: voxelSize / 8,
+                    curveSegments: 4,
+                    bevelEnabled: true,
+                    bevelThickness: 2,
+                    bevelSize: 1,
+                    bevelOffset: 0,
+                    bevelSegments: 3
+                });
+                let voxel = new THREE.Mesh(geometry, material);
+                voxel.position.set(x, y, z);
+                voxel.visible = false; // Initially set all voxels to be invisible
+                voxel.scale.set(scaleFactor, scaleFactor, scaleFactor)
+                group.add(voxel);
+                voxels.push(voxel); // Store voxel in the array
+            }
+        }
+    }
+
+    // Create a material for the convex hull
+    let hullMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xFFFFFF,
+        transparent: true,
+        alphaHash: true,
+        opacity: 0.6,
+        wireframe: true
+    });
+
+    let hullGeometry = new ConvexGeometry([]);
+    let convexHull = new THREE.Mesh(hullGeometry, hullMaterial);
+    group.add(convexHull);
+
+    function updateConvexHull() {
+        // Only update if there are visible points
+        if (visiblePoints.length > 0) {
+            hullGeometry.dispose(); // Dispose of the old geometry
+            hullGeometry = new ConvexGeometry(visiblePoints);
+            convexHull.geometry = hullGeometry;
+            // console.log(hullGeometry)
+
+        }
+    }
+
+    function displayRandomVoxel() {
+
+        // Check if updates are enabled
+        if (!updateEnabled) return;
+
+        // Clear visiblePoints array
+        visiblePoints = [];
+
+        // Hide all voxels and update visiblePoints
+        voxels.forEach(v => {
+            v.visible = false;
+            v.geometry = new TextGeometry('', {
+                font: font,
+                size: voxelSize,
+                height: voxelSize / 2,
+            });
+            if (v.visible) {
+                visiblePoints.push(v.position.clone());
+            }
+        });
+
+        // Randomly decide to add, subtract, or maintain the number of voxels
+        let change = Math.floor(Math.random() * 3) - 1; // -1, 0, or 1
+        currentVisibleVoxels = Math.max(7, Math.min(7, currentVisibleVoxels + change));
+
+        // Randomly choose distinct voxels to display with random character
+        while (currentVisibleVoxels > 0) {
+            let randomIndex = Math.floor(Math.random() * voxels.length);
+            let randomChar = characters[Math.floor(Math.random() * characters.length)];
+            let voxel = voxels[randomIndex];
+            voxel.geometry.dispose(); // Dispose of the old geometry
+            voxel.geometry = new TextGeometry(randomChar, {
+                font: font,
+                size: voxelSize * 0.8,
+                height: voxelSize / 8,
+                curveSegments: 4,
+                bevelEnabled: true,
+                bevelThickness: 2,
+                bevelSize: 1,
+                bevelOffset: 0,
+                bevelSegments: 3
+            });
+            voxel.visible = true;
+            visiblePoints.push(voxel.position.clone());
+            currentVisibleVoxels--;
+        }
+
+        // Update visiblePoints array with positions of visible voxels
+        visiblePoints = voxels.filter(v => v.visible).map(v => v.position.clone());
+
+        // Update the convex hull
+        updateConvexHull();
+    }
+
+
+    // Start the interval initially
+    startUpdateInterval();
+
+    // Set an interval to update the displayed voxel
+    setInterval(displayRandomVoxel, 100);
+
+    // Event listener for key press
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 't' || event.key === 'T') {
+            displayRandomVoxel(); // Randomize once without toggling the interval
+        } else if (event.key === 'r' || event.key === 'R') {
+            if (isUpdating) {
+                stopUpdateInterval(); // Stop the continuous update
+            } else {
+                startUpdateInterval(); // Start the continuous update
+            }
+        }
+    });    
+
+    return group;
+}
+
 
 function createIsometricCube(size, grid) {
     let group = new THREE.Group();
@@ -435,6 +419,20 @@ function addLine(group, start, end) {
     return line;
 }
 
+// Define these variables at a higher scope level
+let isUpdating;
+let updateEnabled;
+
+// Function to start the update interval
+function startUpdateInterval() {
+    isUpdating = true;
+}
+
+// Function to stop the update interval
+function stopUpdateInterval() {
+    isUpdating = false;
+}
+
 
 export function isometricCube3D(containerId) {
     let containerDiv = document.getElementById(containerId);
@@ -464,7 +462,6 @@ export function isometricCube3D(containerId) {
     // Cube and grid parameters
     const cubeSize = 250;
     const gridSize = 8;
-    const pointCloudDensity = 20;
     const scaleFactor = 0.8;
     const objScaleFactor = 2;
 
@@ -489,19 +486,12 @@ export function isometricCube3D(containerId) {
     let voxelCube = createCubes(cubeSize, gridSize, scaleFactor)
     let sphere = createSpheres(cubeSize, gridSize, scaleFactor)
     scene.add(isoCube);
-    // scene.add(voxelCube);
+    scene.add(voxelCube);
     // scene.add(sphere);
 
     // Camera positioning
     camera.position.z = 500;
     camera.up.set(0,1,0);
-
-    let updateInterval;
-    isUpdating = true; // Flag to track the update state
-
-    function toggleUpdate() {
-        updateEnabled = !updateEnabled; // Toggle the update state
-    }
 
     // Start the interval initially
     startUpdateInterval();

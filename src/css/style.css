@@ -5,7 +5,7 @@
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
-  background-color: #000000;
+  background-color: #FFFFFF;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -118,7 +118,7 @@ button:focus-visible {
 #asciiContainer1 {
   width: 100vw; 
   height: 100vh;
-  filter: grayscale(0.9) invert();
+  filter: grayscale(0.9);
 }
 
 #cubeContainer1 {
@@ -127,6 +127,12 @@ button:focus-visible {
   /* filter: grayscale(0.9); */
 }
 
+#heartContainer1 {
+  width: 100vw; 
+  height: 100vh;
+  /* filter: invert(1); */
+  z-index: 1000000000;
+}
 
 .module-selector {
   position: fixed;
