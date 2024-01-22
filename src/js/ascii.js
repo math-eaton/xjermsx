@@ -12,8 +12,8 @@ export function asciiArt(containerId) {
   let animateObjects = true;
 
   // Toggles for rendering hearts and text
-  const renderHearts = false; // Set to false to not render hearts
-  const renderText = true; // Set to false to not render text
+  const renderHearts = true; // Set to false to not render hearts
+  const renderText = false; // Set to false to not render text
   
 
   function init() {
@@ -47,41 +47,28 @@ export function asciiArt(containerId) {
 
     // Controls
     controls = new OrbitControls(camera, effect.domElement);
-    controls.autoRotate = true;
+    controls.autoRotate = false;
 
     // Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
     scene.add(ambientLight);
 
-  // Variables to store sum of all heart positions
-  let sumX = 0, sumY = 0, sumZ = 0;
-
-  // Create multiple hearts only if renderHearts is true
-  if (renderHearts) {
-    for (let i = 0; i < 12; i++) {
-      let heartObject = createHearts();
-      let heartMesh = heartObject.shape;
-      heartMesh.position.set(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
-      heartMesh.scale.setScalar(Math.random() * 1.0 + 1.0);
-      heartMesh.rotationSpeed = new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(0.02);
-      hearts.push(heartMesh);
-      scene.add(heartMesh);
-
-      // Add position to sum
-      sumX += heartMesh.position.x;
-      sumY += heartMesh.position.y;
-      sumZ += heartMesh.position.z;
+    // Call createHearts if rendering hearts is true
+    if (renderHearts) {
+      createHearts(); // This function now handles creating and positioning hearts
     }
-    
-    // Calculate centroid
-    const centroid = new THREE.Vector3(sumX / hearts.length, sumY / hearts.length, sumZ / hearts.length) + 50;
 
-    // Add a bright light at the centroid
-    const brightLight = new THREE.PointLight(0xffffff, 1.5, 50);
-    brightLight.position.set(centroid.x, centroid.y, centroid.z);
-    // scene.add(brightLight);
-  }
-
+    if (renderText) {
+      createText(() => {
+        // Only create hearts after the text has been created and its bounding box calculated
+        if (renderHearts) {
+          createHearts();
+        }
+      });
+    } else if (renderHearts) {
+      createHearts();
+    }
+  
     // Additional lights
     const numberOfLights = 20; // You can adjust the number of lights
     for (let i = 0; i < numberOfLights; i++) {
@@ -129,23 +116,41 @@ export function asciiArt(containerId) {
         console.log("All objects reset to default orientation");
       } else if (event.key === 'r') {
         animateObjects = !animateObjects; // Toggle the state of animateObjects
-        controls.autoRotate = animateObjects; // Also toggle the autoRotate feature of the OrbitControls
+        // controls.autoRotate = animateObjects; // Also toggle the autoRotate feature of the OrbitControls
         console.log(animateObjects);
       } else if (event.key === 't') {
-        if (hearts.length > 0) {
-          const heartToRemove = hearts.pop(); // Remove the last heart
-          scene.remove(heartToRemove);
-          heartToRemove.geometry.dispose();
-          heartToRemove.material.dispose();
-        }
+          if (hearts.length > 0) {
+            const heartToRemove = hearts.pop(); // Remove the last heart from the array
+            scene.remove(heartToRemove); // Remove it from the scene
+            if (heartToRemove.geometry) heartToRemove.geometry.dispose();
+            if (heartToRemove.material) heartToRemove.material.dispose();
+          }
       } else if (event.key === 'y') {
-        const newHeart = createHearts().shape; // Assuming createHearts returns { shape: heart, centroid: heartCentroid }
-        newHeart.position.set(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+        // Create and add a single new heart
+        const newHeart = createHeartShape();
+        let validPosition = false;
+    
+        // Check if textMesh has been created and calculate its bounding box
+        let textBoundingBox;
+        if (renderText && textMesh) {
+          textMesh.geometry.computeBoundingBox();
+          textBoundingBox = textMesh.geometry.boundingBox.clone();
+          textBoundingBox.expandByScalar(5); // Buffer zone
+        }
+    
+        // Find a valid position for the new heart
+        while (!validPosition) {
+          newHeart.position.set(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+          if (!textBoundingBox || !textBoundingBox.containsPoint(newHeart.position)) {
+            validPosition = true;
+          }
+        }
+    
         newHeart.scale.setScalar(Math.random() * 1.0 + 1.0);
         newHeart.rotationSpeed = new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(0.02);
         hearts.push(newHeart);
         scene.add(newHeart);
-      }
+      }      
     });
     
     
@@ -166,8 +171,8 @@ export function asciiArt(containerId) {
     loader.load('font/Bank Script D_Regular.json', function (font) {
       const textGeometry = new TextGeometry('xJermsx', {
         font: font,
-        size: 10,
-        height: .25,
+        size: 8.5,
+        height: 1,
         curveSegments: 5,
         bevelEnabled: true,
         bevelThickness: .1,
@@ -188,40 +193,16 @@ export function asciiArt(containerId) {
       textMesh = new THREE.Mesh(textGeometry, material);
       scene.add(textMesh);
     });
+
+      // After adding textMesh to the scene
+    // textMesh.geometry.computeBoundingBox();
+    // callback(); // Call the callback function to indicate text is ready
+
   }
 
 
-  function animate() {
-    animationFrameId = requestAnimationFrame(animate);
 
-    if (animateObjects) {
-      // Animate hearts if enabled
-      if (renderHearts) {
-        hearts.forEach(heart => {
-          heart.rotation.x += heart.rotationSpeed.x;
-          heart.rotation.y += heart.rotationSpeed.y;
-          heart.rotation.z += heart.rotationSpeed.z;
-        });
-      }
-
-      // Animate text if enabled
-      if (renderText && textMesh) {
-        textMesh.rotation.x += 0.01;
-        textMesh.rotation.y += 0.01;
-      }
-    }
-
-    controls.update();
-    effect.render(scene, camera);
-  }
-  
-  function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    effect.setSize(window.innerWidth, window.innerHeight);
-  }
-
-  function createHearts() {
+  function createHeartShape() {
     const x = 0, y = 0;
     const heartShape = new THREE.Shape();
     heartShape.moveTo(x + 0.5, y + 0.5);
@@ -243,7 +224,7 @@ export function asciiArt(containerId) {
       });
     
     geometry.center();
-  
+
     const material = new THREE.MeshPhongMaterial({
         color: 0xFFFFFF,
         specular: 0xffffff,
@@ -253,11 +234,75 @@ export function asciiArt(containerId) {
     });
   
     const heart = new THREE.Mesh(geometry, material);
-    const heartCentroid = new THREE.Vector3(0, 1.25, 0); // Define the heart's centroid
     heart.rotation.x = Math.PI;
-    return { shape: heart, centroid: heartCentroid };
+
+    return heart; // Return the created heart mesh
+}
+
+function createHearts() {
+  // Define the buffer zone around the text
+  let bufferZone = 15000; // Adjust the size of the buffer zone as needed
+
+  // Check if textMesh has been created and calculate its bounding box
+  let textBoundingBox;
+  if (renderText && textMesh) {
+      textMesh.geometry.computeBoundingBox();
+      textBoundingBox = textMesh.geometry.boundingBox.clone();
+      textBoundingBox.expandByScalar(bufferZone);
+  }
+
+  // Create and position hearts
+    // Create and position hearts
+    for (let i = 0; i < 7; i++) {
+      let heartMesh = createHeartShape();
+      let validPosition = false;
+
+      // Attempt to find a valid position that doesn't overlap with the text
+      while (!validPosition) {
+          heartMesh.position.set(Math.random() * 20 - 10, Math.random() * 20 - 10, Math.random() * 20 - 10);
+          if (!textBoundingBox || !textBoundingBox.containsPoint(heartMesh.position)) {
+              validPosition = true;
+          }
+      }
+
+      heartMesh.scale.setScalar(Math.random() * 1.0 + 1.0);
+      heartMesh.rotationSpeed = new THREE.Vector3(Math.random(), Math.random(), Math.random()).multiplyScalar(0.02);
+      hearts.push(heartMesh);
+      scene.add(heartMesh);
+  }
+}
+
+  
+  function animate() {
+    animationFrameId = requestAnimationFrame(animate);
+
+    if (animateObjects) {
+      // Animate hearts if enabled
+      if (renderHearts) {
+        hearts.forEach(heart => {
+          heart.rotation.x += heart.rotationSpeed.x;
+          heart.rotation.y += heart.rotationSpeed.y;
+          // heart.rotation.z += heart.rotationSpeed.z;
+        });
+      }
+
+      // Animate text if enabled
+      if (renderText && textMesh) {
+        // textMesh.rotation.x += 0.01;
+        // textMesh.rotation.y += 0.01;
+      }
+    }
+
+    controls.update();
+    effect.render(scene, camera);
   }
   
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    effect.setSize(window.innerWidth, window.innerHeight);
+  }
+
   init();
   animate();
 
