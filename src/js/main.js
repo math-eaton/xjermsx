@@ -1,6 +1,6 @@
 import "../css/style.css";
-import { asciiHearts } from "./asciiHearts.js";
+import { asciiArt } from "./ascii.js";
 
 window.onload = () => {
-  asciiHearts('heartContainer1');
+  asciiArt('asciiContainer1');
 };

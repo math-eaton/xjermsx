@@ -25,7 +25,7 @@ export function asciiHearts(containerId) {
     const customCharSet = ' ♡❣♥☺x6☹%&*⛆@#❤☺☻'
     const asciiOptions = {
         invert: true,
-        resolution: 0.35, // Adjust for more or less detail
+        resolution: 0.3, // Adjust for more or less detail
         scale: 1.0,       // Adjust based on your display requirements
         color: false,     // Set to true if you want colored ASCII characters
         block: false,
